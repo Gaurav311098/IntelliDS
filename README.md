@@ -39,21 +39,6 @@ IntelliDS enables users to perform the complete machine learning lifecycle witho
 
 ---
 
-
-## Screenshots
-
-> Add application screenshots inside the `screenshots/` folder.
-
-* Dashboard
-* Dataset Upload
-* Data Preparation
-* Data Visualization
-* Model Training
-* Model Comparison
-* Prediction
-
----
-
 ## Project Presentation
 
 The project presentation and architecture diagram are available in the **Presentation/** folder.

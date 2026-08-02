@@ -39,22 +39,6 @@ IntelliDS enables users to perform the complete machine learning lifecycle witho
 
 ---
 
-## Project Structure
-
-```text
-IntelliDS_AutoML/
-│
-├── access_portal/         # Django project
-├── core/                  # Main application
-├── sample_Datasets/       # Sample datasets
-├── Presentation/          # Project presentation & architecture
-├── screenshots/           # Application screenshots
-├── manage.py
-├── requirements.txt
-└── README.md
-```
-
----
 
 ## Screenshots
 
@@ -67,28 +51,6 @@ IntelliDS_AutoML/
 * Model Training
 * Model Comparison
 * Prediction
-
----
-
-## Installation
-
-```bash
-git clone https://github.com/YOUR_USERNAME/IntelliDS.git
-
-cd IntelliDS
-
-pip install -r requirements.txt
-
-python manage.py migrate
-
-python manage.py runserver
-```
-
-Open:
-
-```text
-http://127.0.0.1:8000
-```
 
 ---
 

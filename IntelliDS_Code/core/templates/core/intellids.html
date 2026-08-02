@@ -1,0 +1,1108 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dataset Analysis - IntelliDS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: { primary: "#3B82F6" },
+          },
+        },
+      };
+    </script>
+    <style>
+      /* Full page background */
+      body {
+        font-family: "Inter", sans-serif;
+        background-image: url("{% static 'images/bg.png' %}");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        min-height: 100vh;
+        position: relative;
+      }
+
+      .page-content {
+        position: relative;
+        z-index: 10;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 font-sans">
+    <!-- Top Navbar -->
+    <nav
+      class="fixed top-0 left-0 right-0 bg-white shadow-lg px-6 py-4 flex justify-between items-center z-50"
+    >
+      <h1 class="text-xl font-bold text-primary">
+        {% if request.user.is_superuser %} Admin Portal {% else %} User Portal
+        {% endif %}
+      </h1>
+
+      <div class="flex items-center space-x-4">
+        <span class="text-gray-700">Welcome, {{ request.user.username }}</span>
+        <a
+          href="{% url 'logout' %}"
+          class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition"
+          >Logout</a
+        >
+      </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <aside
+      class="fixed left-0 top-16 bottom-0 w-64 bg-white shadow-lg overflow-y-auto hidden md:block z-40"
+    >
+      <div class="p-6">
+        <nav class="mt-6 space-y-2">
+          <!-- Dashboard always visible -->
+          <a
+            href="{% if request.user.is_superuser %}{% url 'admin_dashboard' %}{% else %}{% url 'user_dashboard' %}{% endif %}"
+            class="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-100"
+          >
+            <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+          </a>
+
+          <!-- upload_dataset always visible -->
+          <a
+            href="{% if request.user.is_superuser %}{% url 'admin_dashboard' %}{% else %}{% url 'upload_dataset' %}{% endif %}"
+            class="flex items-center px-4 py-2 text-primary bg-blue-100 rounded font-bold"
+          >
+            <i class="fas fa-chart-line mr-2"></i>Data Analysis
+          </a>
+
+          <!-- upload_dataset always visible -->
+          <a
+            href="{% if request.user.is_superuser %}{% url 'admin_dashboard' %}{% else %}{% url 'data_preparation' %}{% endif %}"
+            class="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-100"
+          >
+            <i class="fas fa-broom mr-2"></i>Data Preparation
+          </a>
+
+          <a
+            href="{% if request.user.is_superuser %}{% url 'admin_dashboard' %}{% else %}{% url 'data_visualization' %}{% endif %}"
+            class="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-100"
+          >
+            <i class="fas fa-chart-bar mr-2"></i>
+            Data Visualization
+          </a>
+
+          <a
+            href="{% if request.user.is_superuser %}{% url 'admin_dashboard' %}{% else %}{% url 'model_training' %}{% endif %}"
+            class="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-100"
+          >
+            <i class="fas fa-brain mr-2"></i>Model Training
+          </a>
+
+          <!-- Dynamic menu items -->
+          {% for menu in menus %}
+          <a
+            href="{% url 'dynamic_menu_page' menu.url_name %}"
+            class="flex items-center px-4 py-2 rounded transition-colors duration-200 {% if current_url_name == menu.url_name %} bg-blue-100 text-primary font-bold {% else %} text-gray-700 hover:bg-blue-100 hover:text-primary {% endif %}"
+          >
+            {% if menu.icon %}
+            <i class="{{ menu.icon }} mr-2"></i>
+            {% endif %} {{ menu.name }}
+          </a>
+          {% endfor %}
+        </nav>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="content-area" class="ml-64 mt-16 p-6">
+      <!-- Page Header -->
+      <div class="bg-white rounded-xl shadow p-6 mb-6">
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-3xl font-bold text-gray-800">
+              IntelliDS - AutoML Wizard
+            </h1>
+
+            <p id="wizardStepTitle" class="text-gray-500 mt-2">
+              Step 1 of 10 - Upload Dataset
+            </p>
+          </div>
+
+          <div class="text-right">
+            <div class="text-sm text-gray-500">Progress</div>
+
+            <div class="w-60 h-3 bg-gray-200 rounded-full mt-2">
+              <div
+                id="progressBar"
+                class="bg-blue-600 h-3 rounded-full transition-all duration-500"
+                style="width: 10%"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload Card -->
+      <div class="wizard-step" id="step1">
+        <!-- ================================================= -->
+        <!-- Dataset Upload & Dataset Analysis -->
+        <!-- ================================================= -->
+
+        <div
+          class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden mb-8"
+        >
+          <!-- Header -->
+
+          <div
+            class="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-7 text-white"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex items-center">
+                <div
+                  class="w-16 h-16 rounded-xl bg-white/20 flex items-center justify-center"
+                >
+                  <i class="fas fa-file-upload text-3xl"></i>
+                </div>
+
+                <div class="ml-5">
+                  <h2 class="text-3xl font-bold">Dataset Upload & Analysis</h2>
+
+                  <p class="text-blue-100 mt-2 max-w-4xl leading-relaxed">
+                    Upload your dataset to begin the IntelliDS workflow. After
+                    the dataset is uploaded, IntelliDS performs a detailed
+                    analysis to understand its structure, data quality, feature
+                    types, statistical characteristics and overall suitability
+                    for machine learning. The uploaded dataset remains unchanged
+                    during this stage. This step is designed to help you
+                    understand your data before proceeding to data preparation,
+                    visualization, feature engineering and model training.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Body -->
+
+          <div class="p-8">
+            <form id="uploadForm" method="POST" enctype="multipart/form-data">
+              {% csrf_token %}
+
+              <!-- Supported Formats -->
+
+              <div class="grid md:grid-cols-3 gap-5 mb-8">
+                <div class="border rounded-xl bg-blue-50 p-5 text-center">
+                  <i class="fas fa-file-excel text-4xl text-blue-600 mb-3"></i>
+
+                  <h3 class="font-bold text-blue-700">Excel Workbook</h3>
+
+                  <p class="text-gray-600 mt-2">.xlsx</p>
+                </div>
+
+                <div class="border rounded-xl bg-green-50 p-5 text-center">
+                  <i class="fas fa-file-excel text-4xl text-green-600 mb-3"></i>
+
+                  <h3 class="font-bold text-green-700">Legacy Excel</h3>
+
+                  <p class="text-gray-600 mt-2">.xls</p>
+                </div>
+
+                <div class="border rounded-xl bg-orange-50 p-5 text-center">
+                  <i class="fas fa-file-csv text-4xl text-orange-600 mb-3"></i>
+
+                  <h3 class="font-bold text-orange-700">CSV Dataset</h3>
+
+                  <p class="text-gray-600 mt-2">.csv</p>
+                </div>
+              </div>
+
+              <!-- Upload Area -->
+
+              <div
+                class="border-2 border-dashed border-blue-300 rounded-2xl bg-gradient-to-br from-blue-50 to-white p-10 text-center"
+              >
+                <div
+                  class="w-24 h-24 rounded-full bg-blue-100 mx-auto flex items-center justify-center"
+                >
+                  <i class="fas fa-cloud-upload-alt text-5xl text-blue-600"></i>
+                </div>
+
+                <h3 class="text-2xl font-bold text-gray-800 mt-6">
+                  Upload Your Dataset
+                </h3>
+
+                <p class="text-gray-500 mt-3 mb-6">
+                  Drag & Drop your dataset here or click below to browse your
+                  computer. IntelliDS supports Excel and CSV files for
+                  structured data analysis.
+                </p>
+
+                <div class="flex justify-center">{{ form.dataset }}</div>
+
+                {% if form.dataset.errors %}
+                <div class="mt-4 text-red-600">{{ form.dataset.errors }}</div>
+                {% endif %}
+
+                <div class="mt-6 text-sm text-gray-500">
+                  Maximum File Size :
+                  <strong>100 MB</strong>
+
+                  &nbsp;&nbsp; | &nbsp;&nbsp; Supported Formats :
+                  <strong>.csv</strong>, <strong>.xls</strong>,
+                  <strong>.xlsx</strong>
+                </div>
+              </div>
+
+              <!-- Analysis Features -->
+
+              <div class="mt-10">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6">
+                  IntelliDS Dataset Analysis
+                </h3>
+
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <!-- Dataset Summary -->
+
+                  <div
+                    class="bg-gray-50 border rounded-xl p-6 text-center hover:shadow-lg hover:-translate-y-1 transition duration-300"
+                  >
+                    <div
+                      class="w-20 h-20 mx-auto mb-5 rounded-full bg-blue-100 flex items-center justify-center"
+                    >
+                      <i class="fas fa-table text-4xl text-blue-600"></i>
+                    </div>
+
+                    <h4 class="text-lg font-semibold text-gray-800">
+                      Dataset Summary
+                    </h4>
+
+                    <p class="text-sm text-gray-500 mt-3 leading-6">
+                      Displays the total number of rows, columns, memory usage
+                      and overall dataset dimensions for a quick overview.
+                    </p>
+                  </div>
+
+                  <!-- Column Profiling -->
+
+                  <div
+                    class="bg-gray-50 border rounded-xl p-6 text-center hover:shadow-lg hover:-translate-y-1 transition duration-300"
+                  >
+                    <div
+                      class="w-20 h-20 mx-auto mb-5 rounded-full bg-green-100 flex items-center justify-center"
+                    >
+                      <i class="fas fa-layer-group text-4xl text-green-600"></i>
+                    </div>
+
+                    <h4 class="text-lg font-semibold text-gray-800">
+                      Column Profiling
+                    </h4>
+
+                    <p class="text-sm text-gray-500 mt-3 leading-6">
+                      Profiles every feature by identifying its data type,
+                      unique values, missing values, memory usage and sample
+                      data.
+                    </p>
+                  </div>
+
+                  <!-- Data Quality -->
+
+                  <div
+                    class="bg-gray-50 border rounded-xl p-6 text-center hover:shadow-lg hover:-translate-y-1 transition duration-300"
+                  >
+                    <div
+                      class="w-20 h-20 mx-auto mb-5 rounded-full bg-red-100 flex items-center justify-center"
+                    >
+                      <i class="fas fa-check-circle text-4xl text-red-600"></i>
+                    </div>
+
+                    <h4 class="text-lg font-semibold text-gray-800">
+                      Data Quality Assessment
+                    </h4>
+
+                    <p class="text-sm text-gray-500 mt-3 leading-6">
+                      Detects missing values, duplicate records, empty columns,
+                      constant columns and other quality issues.
+                    </p>
+                  </div>
+
+                  <!-- Feature Categorization -->
+
+                  <div
+                    class="bg-gray-50 border rounded-xl p-6 text-center hover:shadow-lg hover:-translate-y-1 transition duration-300"
+                  >
+                    <div
+                      class="w-20 h-20 mx-auto mb-5 rounded-full bg-purple-100 flex items-center justify-center"
+                    >
+                      <i class="fas fa-chart-pie text-4xl text-purple-600"></i>
+                    </div>
+
+                    <h4 class="text-lg font-semibold text-gray-800">
+                      Feature Categorization
+                    </h4>
+
+                    <p class="text-sm text-gray-500 mt-3 leading-6">
+                      Automatically classifies features into Numeric,
+                      Categorical, Datetime and Boolean data types.
+                    </p>
+                  </div>
+
+                  <!-- Statistical Analysis -->
+
+                  <div
+                    class="bg-gray-50 border rounded-xl p-6 text-center hover:shadow-lg hover:-translate-y-1 transition duration-300"
+                  >
+                    <div
+                      class="w-20 h-20 mx-auto mb-5 rounded-full bg-orange-100 flex items-center justify-center"
+                    >
+                      <i class="fas fa-calculator text-4xl text-orange-600"></i>
+                    </div>
+
+                    <h4 class="text-lg font-semibold text-gray-800">
+                      Statistical Analysis
+                    </h4>
+
+                    <p class="text-sm text-gray-500 mt-3 leading-6">
+                      Calculates descriptive statistics including mean, median,
+                      minimum, maximum and standard deviation for numeric
+                      features.
+                    </p>
+                  </div>
+
+                  <!-- Target Detection -->
+
+                  <div
+                    class="bg-gray-50 border rounded-xl p-6 text-center hover:shadow-lg hover:-translate-y-1 transition duration-300"
+                  >
+                    <div
+                      class="w-20 h-20 mx-auto mb-5 rounded-full bg-teal-100 flex items-center justify-center"
+                    >
+                      <i class="fas fa-bullseye text-4xl text-teal-600"></i>
+                    </div>
+
+                    <h4 class="text-lg font-semibold text-gray-800">
+                      Target Detection
+                    </h4>
+
+                    <p class="text-sm text-gray-500 mt-3 leading-6">
+                      Suggests possible target columns and determines whether
+                      the dataset is better suited for classification or
+                      regression tasks.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Guidelines -->
+
+              <div class="grid lg:grid-cols-2 gap-6 mt-10">
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-6">
+                  <h4 class="font-bold text-blue-800 mb-4">
+                    Recommended Dataset Structure
+                  </h4>
+
+                  <ul class="space-y-2 text-gray-700">
+                    <li>1. Use the first row as column headers.</li>
+
+                    <li>2. Store only one dataset per worksheet.</li>
+
+                    <li>3. Avoid merged cells and complex formatting.</li>
+
+                    <li>4. Keep consistent data types within each column.</li>
+
+                    <li>5. Ensure identifier columns are clearly named.</li>
+
+                    <li>6. Save files in CSV or Excel format.</li>
+                  </ul>
+                </div>
+
+                <div class="bg-green-50 border border-green-200 rounded-xl p-6">
+                  <h4 class="font-bold text-green-800 mb-4">
+                    What Happens After Upload?
+                  </h4>
+
+                  <ul class="space-y-2 text-gray-700">
+                    <li>1. Dataset preview is generated.</li>
+
+                    <li>2. Overall dataset statistics are calculated.</li>
+
+                    <li>3. Column-wise profiling is performed.</li>
+
+                    <li>4. Dataset quality score is calculated.</li>
+
+                    <li>
+                      5. Missing values and duplicate records are identified.
+                    </li>
+
+                    <li>
+                      6. Feature types and statistical summaries are generated.
+                    </li>
+
+                    <li>7. Potential target columns are suggested.</li>
+
+                    <li>
+                      8. Recommendations are provided before data preparation.
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Upload Button -->
+
+              <div class="mt-10 text-center">
+                <button
+                  type="submit"
+                  class="inline-flex items-center px-10 py-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg transition duration-300"
+                >
+                  <i class="fas fa-upload mr-3"></i>
+
+                  Upload & Analyze Dataset
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div id="resultSection">
+          {% if summary %}
+
+          <!-- Dataset Summary -->
+
+          <div class="grid grid-cols-4 gap-5 mb-6">
+            <div class="bg-white shadow rounded-lg p-5">
+              <div class="text-gray-500">Rows</div>
+
+              <div class="text-2xl font-bold text-blue-600">
+                {{ summary.rows }}
+              </div>
+            </div>
+
+            <div class="bg-white shadow rounded-lg p-5">
+              <div class="text-gray-500">Columns</div>
+
+              <div class="text-2xl font-bold text-blue-600">
+                {{ summary.columns }}
+              </div>
+            </div>
+
+            <div class="bg-white shadow rounded-lg p-5">
+              <div class="text-gray-500">Missing Values</div>
+
+              <div class="text-2xl font-bold text-red-600">
+                {{ summary.missing }}
+              </div>
+            </div>
+
+            <div class="bg-white shadow rounded-lg p-5">
+              <div class="text-gray-500">Duplicate Rows</div>
+
+              <div class="text-2xl font-bold text-orange-600">
+                {{ summary.duplicates }}
+              </div>
+            </div>
+          </div>
+
+          {% endif %} {% if preview %}
+
+          <!-- Dataset Preview -->
+
+          <div id="dataset-preview" class="bg-white rounded-xl shadow">
+            <div class="p-5 border-b">
+              <h2 class="text-xl font-bold">Dataset Preview</h2>
+
+              <p class="text-gray-500">First 100 rows</p>
+            </div>
+
+            <div class="overflow-auto" style="max-height: 600px">
+              <table
+                class="min-w-max border border-gray-300 text-sm whitespace-nowrap"
+              >
+                <thead class="bg-gray-100 sticky top-0">
+                  <tr>
+                    {% for col in columns %}
+
+                    <th class="border px-4 py-2 whitespace-nowrap">
+                      {{ col }}
+                    </th>
+
+                    {% endfor %}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {% for row in preview %}
+
+                  <tr class="hover:bg-blue-50">
+                    {% for value in row %}
+
+                    <td class="border px-4 py-2 whitespace-nowrap">
+                      {{ value }}
+                    </td>
+
+                    {% endfor %}
+                  </tr>
+
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {% endif %}
+        </div>
+      </div>
+      <!-- END STEP 1 -->
+      <div class="wizard-step hidden" id="step2">
+        {% if profile %}
+
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 mb-8">
+          <div class="border-b p-6">
+            {% if health_score %}
+
+            <div
+              class="bg-white rounded-xl shadow-lg border border-gray-200 mb-8"
+            >
+              <div class="p-6">
+                <div class="flex justify-between items-center">
+                  <div>
+                    <h2 class="text-2xl font-bold text-gray-800">
+                      Dataset Health Score
+                    </h2>
+
+                    <p class="text-gray-500">
+                      Overall quality of the uploaded dataset.
+                    </p>
+                  </div>
+
+                  <div
+                    class="text-5xl font-bold {% if health_score >= 80 %} text-green-600 {% elif health_score >= 60 %} text-yellow-500 {% else %} text-red-600 {% endif %}"
+                  >
+                    {{ health_score }}%
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {% endif %} {% if summary %}
+
+            <div class="grid grid-cols-4 gap-5 mb-8">
+              <div class="bg-blue-50 rounded-xl border p-5">
+                <div class="text-gray-500">Numeric Columns</div>
+                <div class="text-3xl font-bold text-blue-700">
+                  {{ summary.numeric }}
+                </div>
+              </div>
+
+              <div class="bg-green-50 rounded-xl border p-5">
+                <div class="text-gray-500">Categorical</div>
+                <div class="text-3xl font-bold text-green-700">
+                  {{ summary.categorical }}
+                </div>
+              </div>
+
+              <div class="bg-purple-50 rounded-xl border p-5">
+                <div class="text-gray-500">Datetime</div>
+                <div class="text-3xl font-bold text-purple-700">
+                  {{ summary.datetime }}
+                </div>
+              </div>
+
+              <div class="bg-orange-50 rounded-xl border p-5">
+                <div class="text-gray-500">Boolean</div>
+                <div class="text-3xl font-bold text-orange-700">
+                  {{ summary.boolean }}
+                </div>
+              </div>
+            </div>
+
+            {% endif %} {% if missing_columns %}
+
+            <div
+              class="bg-white rounded-xl shadow-lg border border-gray-200 mb-8"
+            >
+              <div class="border-b p-6">
+                <h2 class="text-2xl font-bold">Columns With Missing Values</h2>
+              </div>
+
+              <table class="min-w-full">
+                <thead class="bg-gray-100">
+                  <tr>
+                    <th class="px-4 py-3 text-left">Column</th>
+
+                    <th class="px-4 py-3 text-center">Missing</th>
+
+                    <th class="px-4 py-3 text-center">Percentage</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {% for col in missing_columns %}
+
+                  <tr class="border-t">
+                    <td class="px-4 py-3">{{ col.column }}</td>
+
+                    <td class="px-4 py-3 text-center">{{ col.missing }}</td>
+
+                    <td class="px-4 py-3 text-center">{{ col.percent }}%</td>
+                  </tr>
+
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            {% endif %} {% if identifier_columns %}
+
+            <div class="bg-blue-50 rounded-xl border border-blue-200 p-6 mb-8">
+              <h2 class="text-xl font-bold text-blue-700 mb-4">
+                Possible Identifier Columns
+              </h2>
+
+              <div class="flex flex-wrap gap-3">
+                {% for col in identifier_columns %}
+
+                <span class="bg-blue-600 text-white px-4 py-2 rounded-full">
+                  {{ col }}
+                </span>
+
+                {% endfor %}
+              </div>
+            </div>
+
+            {% endif %} {% if target_candidates %}
+
+            <div
+              class="bg-green-50 rounded-xl border border-green-300 p-6 mb-8"
+            >
+              <h2 class="text-xl font-bold text-green-700 mb-4">
+                Suggested Target Columns
+              </h2>
+
+              <table class="min-w-full">
+                <thead>
+                  <tr>
+                    <th class="text-left py-2">Column</th>
+
+                    <th class="text-center py-2">Unique Classes</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {% for col in target_candidates %}
+
+                  <tr>
+                    <td class="py-2">{{ col.column }}</td>
+
+                    <td class="text-center">{{ col.unique }}</td>
+                  </tr>
+
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            {% endif %} {% if numeric_statistics %}
+
+            <div
+              class="bg-white rounded-xl shadow-lg border border-gray-200 mb-8"
+            >
+              <div class="border-b p-6">
+                <h2 class="text-2xl font-bold">Numeric Statistics</h2>
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                  <thead class="bg-gray-100">
+                    <tr>
+                      <th class="px-4 py-3">Column</th>
+
+                      <th class="px-4 py-3">Mean</th>
+
+                      <th class="px-4 py-3">Median</th>
+
+                      <th class="px-4 py-3">Std</th>
+
+                      <th class="px-4 py-3">Min</th>
+
+                      <th class="px-4 py-3">Max</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {% for col in numeric_statistics %}
+
+                    <tr class="border-t">
+                      <td class="px-4 py-3">{{ col.column }}</td>
+
+                      <td class="px-4 py-3">{{ col.mean }}</td>
+
+                      <td class="px-4 py-3">{{ col.median }}</td>
+
+                      <td class="px-4 py-3">{{ col.std }}</td>
+
+                      <td class="px-4 py-3">{{ col.min }}</td>
+
+                      <td class="px-4 py-3">{{ col.max }}</td>
+                    </tr>
+
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {% endif %} {% if categorical_statistics %}
+
+            <div
+              class="bg-white rounded-xl shadow-lg border border-gray-200 mb-8"
+            >
+              <div class="border-b p-6">
+                <h2 class="text-2xl font-bold">Categorical Statistics</h2>
+              </div>
+
+              <table class="min-w-full">
+                <thead class="bg-gray-100">
+                  <tr>
+                    <th class="px-4 py-3">Column</th>
+
+                    <th class="px-4 py-3">Unique</th>
+
+                    <th class="px-4 py-3">Most Frequent</th>
+
+                    <th class="px-4 py-3">Frequency</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {% for col in categorical_statistics %}
+
+                  <tr class="border-t">
+                    <td class="px-4 py-3">{{ col.column }}</td>
+
+                    <td class="px-4 py-3">{{ col.unique }}</td>
+
+                    <td class="px-4 py-3">{{ col.top }}</td>
+
+                    <td class="px-4 py-3">{{ col.frequency }}</td>
+                  </tr>
+
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            {% endif %}
+            <h2 class="text-2xl font-bold text-gray-800">Dataset Structure</h2>
+
+            <p class="text-gray-500 mt-1">
+              Overview of every column detected by IntelliDS.
+            </p>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="px-4 py-3 text-left">Column</th>
+
+                  <th class="px-4 py-3 text-left">Data Type</th>
+
+                  <th class="px-4 py-3 text-center">Missing</th>
+
+                  <th class="px-4 py-3 text-center">Missing %</th>
+
+                  <th class="px-4 py-3 text-center">Unique</th>
+
+                  <th class="px-4 py-3 text-left">Sample Value</th>
+
+                  <th class="px-4 py-3 text-center">Memory</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {% for col in profile %}
+
+                <tr class="border-t hover:bg-blue-50">
+                  <td class="px-4 py-3 font-medium">{{ col.name }}</td>
+
+                  <td class="px-4 py-3">{{ col.dtype }}</td>
+
+                  <td class="px-4 py-3 text-center">{{ col.missing }}</td>
+
+                  <td class="px-4 py-3 text-center">
+                    {{ col.missing_percent }}%
+                  </td>
+
+                  <td class="px-4 py-3 text-center">{{ col.unique }}</td>
+
+                  <td class="px-4 py-3">{{ col.sample }}</td>
+
+                  <td class="px-4 py-3 text-center">{{ col.memory }} KB</td>
+                </tr>
+
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {% endif %} {% if quality %}
+
+        <div class="grid grid-cols-4 gap-5 mb-8">
+          <div class="bg-white rounded-xl shadow p-5">
+            <div class="text-gray-500">Empty Columns</div>
+
+            <div class="text-3xl font-bold text-red-500">
+              {{ quality.empty_columns }}
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl shadow p-5">
+            <div class="text-gray-500">Constant Columns</div>
+
+            <div class="text-3xl font-bold text-yellow-500">
+              {{ quality.constant_columns }}
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl shadow p-5">
+            <div class="text-gray-500">Duplicate Rows</div>
+
+            <div class="text-3xl font-bold text-orange-500">
+              {{ quality.duplicate_rows }}
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl shadow p-5">
+            <div class="text-gray-500">Missing Cells</div>
+
+            <div class="text-3xl font-bold text-red-600">
+              {{ quality.missing_cells }}
+            </div>
+          </div>
+        </div>
+
+        {% endif %} {% if ai_report %}
+
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 mb-8">
+          <div class="border-b p-6 flex justify-between items-center">
+            <div>
+              <h2 class="text-2xl font-bold text-gray-800">
+                <i class="fas fa-brain text-blue-600 mr-2"></i>
+                IntelliDS Decision Intelligence
+              </h2>
+
+              <p class="text-gray-500">
+                Automatically generated dataset assessment.
+              </p>
+            </div>
+
+            <div class="text-right">
+              <div class="text-gray-500 text-sm">Confidence</div>
+
+              <div class="text-4xl font-bold text-green-600">
+                {{ ai_report.confidence }}%
+              </div>
+            </div>
+          </div>
+
+          <div class="p-6 space-y-6">
+            <!-- Executive Summary -->
+
+            <div class="bg-blue-50 rounded-xl border border-blue-200 p-5">
+              <h3 class="font-bold text-blue-700 text-lg mb-3">
+                Executive Summary
+              </h3>
+
+              <p class="text-gray-700">{{ ai_report.summary }}</p>
+            </div>
+
+            <!-- AI Decision -->
+
+            <div class="grid md:grid-cols-2 gap-5">
+              <div class="border rounded-xl p-5">
+                <div class="text-gray-500">Problem Type</div>
+
+                <div class="text-xl font-bold">
+                  {{ ai_report.problem_type }}
+                </div>
+              </div>
+
+              <div class="border rounded-xl p-5">
+                <div class="text-gray-500">Recommended Model</div>
+
+                <div class="text-xl font-bold">{{ ai_report.model }}</div>
+              </div>
+
+              <div class="border rounded-xl p-5">
+                <div class="text-gray-500">Estimated Accuracy</div>
+
+                <div class="text-xl font-bold text-green-600">
+                  {{ ai_report.accuracy }}
+                </div>
+              </div>
+
+              <div class="border rounded-xl p-5">
+                <div class="text-gray-500">Training Difficulty</div>
+
+                <div class="text-xl font-bold">{{ ai_report.difficulty }}</div>
+              </div>
+            </div>
+
+            <!-- AI Suggestions -->
+
+            <div class="bg-gray-50 rounded-xl p-5">
+              <h3 class="font-bold text-lg mb-4">Recommendations</h3>
+
+              <ul class="space-y-3">
+                {% for tip in ai_report.tips %}
+
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-green-600 mt-1 mr-3"></i>
+
+                  <span>{{ tip }}</span>
+                </li>
+
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {% endif %}
+        <!-- End of step2 -->
+      </div>
+
+      <!-- Navigation -->
+
+      <div class="flex justify-between mt-8">
+        <button
+          id="backBtn"
+          type="button"
+          class="hidden bg-gray-300 hover:bg-gray-400 px-6 py-2 rounded-lg"
+        >
+          ← Back
+        </button>
+
+        <button
+          id="nextBtn"
+          type="button"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-lg"
+        >
+          Next →
+        </button>
+      </div>
+    </main>
+
+    <script>
+      const steps = [
+        { title: "Upload Dataset", progress: 50 },
+        { title: "Dataset Profiling", progress: 100 },
+      ];
+
+      // Preserve scroll position after page refresh
+      window.addEventListener("beforeunload", function () {
+        sessionStorage.setItem("scrollPosition", window.scrollY);
+      });
+
+      window.addEventListener("load", function () {
+        const position = sessionStorage.getItem("scrollPosition");
+
+        if (position) {
+          window.scrollTo({
+            top: parseInt(position),
+            behavior: "instant",
+          });
+
+          sessionStorage.removeItem("scrollPosition");
+        }
+      });
+
+      let currentStep = 1;
+
+      const nextBtn = document.getElementById("nextBtn");
+      const backBtn = document.getElementById("backBtn");
+
+      // Next Button
+      if (nextBtn) {
+        nextBtn.addEventListener("click", function () {
+          if (currentStep < steps.length) {
+            showStep(currentStep + 1);
+          }
+        });
+      }
+
+      // Back Button
+      if (backBtn) {
+        backBtn.addEventListener("click", function () {
+          if (currentStep > 1) {
+            showStep(currentStep - 1);
+          }
+        });
+      }
+
+      // Update Header + Progress
+      function updateWizard() {
+        document.getElementById("wizardStepTitle").innerHTML =
+          `Step ${currentStep} of ${steps.length} - ${steps[currentStep - 1].title}`;
+
+        document.getElementById("progressBar").style.width =
+          steps[currentStep - 1].progress + "%";
+      }
+
+      // Show Wizard Step
+      function showStep(step) {
+        document.querySelectorAll(".wizard-step").forEach(function (section) {
+          section.classList.add("hidden");
+        });
+
+        const currentSection = document.getElementById("step" + step);
+
+        if (currentSection) {
+          currentSection.classList.remove("hidden");
+        }
+
+        currentStep = step;
+
+        updateWizard();
+
+        if (backBtn) {
+          if (step === 1) {
+            backBtn.classList.add("hidden");
+          } else {
+            backBtn.classList.remove("hidden");
+          }
+        }
+
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      }
+
+      // Initialize
+      showStep(1);
+
+      document.querySelectorAll(".ajax-link").forEach((link) => {
+        link.addEventListener("click", function (e) {
+          e.preventDefault();
+
+          fetch(this.href, {
+            headers: {
+              "X-Requested-With": "XMLHttpRequest",
+            },
+          })
+            .then((res) => res.text())
+
+            .then((html) => {
+              document.getElementById("content-area").innerHTML = html;
+
+              history.pushState({}, "", this.href);
+            });
+        });
+      });
+    </script>
+  </body>
+</html>

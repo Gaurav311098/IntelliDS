@@ -1,0 +1,165 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - IntelliDS</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#2563EB",
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+
+      .login-image {
+        background-image: url("{% static 'images/login.jpg' %}");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+      }
+
+      .password-toggle {
+        cursor: pointer;
+      }
+    </style>
+  </head>
+
+  <body class="bg-white">
+    <div class="min-h-screen flex">
+      <!-- LEFT IMAGE -->
+      <div class="hidden lg:flex lg:w-3/5 relative login-image">
+
+        
+      </div>
+
+      <!-- RIGHT LOGIN -->
+      <div class="w-full lg:w-2/5 flex items-center justify-center p-8">
+        <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl p-10">
+          <div class="text-center mb-8">
+            <div
+              class="w-20 h-20 mx-auto rounded-full bg-blue-100 flex items-center justify-center"
+            >
+              <i class="fas fa-user-lock text-3xl text-primary"></i>
+            </div>
+
+            <h2 class="text-3xl font-bold mt-5">Welcome Back</h2>
+
+            <p class="text-gray-500 mt-2">Sign in to continue</p>
+          </div>
+
+          {% if messages %}
+          <div id="alertBox" class="mb-5 space-y-2">
+            {% for message in messages %}
+            <div
+              class="p-3 rounded-lg text-center {% if message.tags == 'success' %} bg-green-100 text-green-700 {% elif message.tags == 'error' %} bg-red-100 text-red-700 {% else %} bg-gray-100 {% endif %}"
+            >
+              {{ message }}
+            </div>
+            {% endfor %}
+          </div>
+
+          <script>
+            setTimeout(() => {
+              let alert = document.getElementById("alertBox");
+              if (alert) alert.remove();
+            }, 4000);
+          </script>
+          {% endif %}
+
+          <form method="POST" class="space-y-5">
+            {% csrf_token %}
+
+            <!-- Username -->
+            <div>
+              <label class="text-sm font-semibold text-gray-600">
+                Username
+              </label>
+
+              <div class="relative mt-2">
+                <i
+                  class="fas fa-user absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                ></i>
+
+                <input
+                  type="text"
+                  name="username"
+                  placeholder="Enter Username"
+                  required
+                  class="w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+            </div>
+
+            <!-- Password -->
+            <div>
+              <label class="text-sm font-semibold text-gray-600">
+                Password
+              </label>
+
+              <div class="relative mt-2">
+                <i
+                  class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                ></i>
+
+                <input
+                  id="password"
+                  type="password"
+                  name="password"
+                  placeholder="Enter Password"
+                  required
+                  class="w-full pl-12 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+
+                <i
+                  id="togglePassword"
+                  class="fas fa-eye absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 password-toggle"
+                >
+                </i>
+              </div>
+            </div>
+
+            <button
+              class="w-full bg-primary hover:bg-blue-700 text-white py-3 rounded-xl font-semibold transition duration-300"
+            >
+              Login
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const togglePassword = document.getElementById("togglePassword");
+      const password = document.getElementById("password");
+
+      togglePassword.addEventListener("click", () => {
+        const type =
+          password.getAttribute("type") === "password" ? "text" : "password";
+
+        password.setAttribute("type", type);
+
+        togglePassword.classList.toggle("fa-eye");
+        togglePassword.classList.toggle("fa-eye-slash");
+      });
+    </script>
+  </body>
+</html>

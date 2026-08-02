@@ -1,0 +1,1109 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Model Training - IntelliDS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: { primary: "#3B82F6" },
+          },
+        },
+      };
+    </script>
+    <style>
+      /* Full page background */
+      body {
+        font-family: "Inter", sans-serif;
+        background-image: url("{% static 'images/bg.png' %}");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        min-height: 100vh;
+        position: relative;
+      }
+
+      .page-content {
+        position: relative;
+        z-index: 10;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 font-sans">
+    <!-- Top Navbar -->
+    <nav
+      class="fixed top-0 left-0 right-0 bg-white shadow-lg px-6 py-4 flex justify-between items-center z-50"
+    >
+      <h1 class="text-xl font-bold text-primary">
+        {% if request.user.is_superuser %} Admin Portal {% else %} User Portal
+        {% endif %}
+      </h1>
+
+      <div class="flex items-center space-x-4">
+        <span class="text-gray-700">Welcome, {{ request.user.username }}</span>
+        <a
+          href="{% url 'logout' %}"
+          class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition"
+          >Logout</a
+        >
+      </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <aside
+      class="fixed left-0 top-16 bottom-0 w-64 bg-white shadow-lg overflow-y-auto hidden md:block z-40"
+    >
+      <div class="p-6">
+        <nav class="mt-6 space-y-2">
+          <!-- Dashboard always visible -->
+          <a
+            href="{% if request.user.is_superuser %}{% url 'admin_dashboard' %}{% else %}{% url 'user_dashboard' %}{% endif %}"
+            class="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-100"
+          >
+            <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+          </a>
+          <!-- upload_dataset always visible -->
+          <a
+            href="{% if request.user.is_superuser %}{% url 'admin_dashboard' %}{% else %}{% url 'upload_dataset' %}{% endif %}"
+            class="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-100"
+          >
+            <i class="fas fa-chart-line mr-2"></i>Data Analysis
+          </a>
+
+          <!-- upload_dataset always visible -->
+          <a
+            href="{% if request.user.is_superuser %}{% url 'admin_dashboard' %}{% else %}{% url 'data_preparation' %}{% endif %}"
+            class="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-100"
+          >
+            <i class="fas fa-broom mr-2"></i>Data Preparation
+          </a>
+
+          <a
+            href="{% if request.user.is_superuser %}{% url 'admin_dashboard' %}{% else %}{% url 'data_visualization' %}{% endif %}"
+            class="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-100"
+          >
+            <i class="fas fa-chart-bar mr-2"></i>
+            Data Visualization
+          </a>
+
+          <!-- upload_dataset always visible -->
+          <a
+            href="{% if request.user.is_superuser %}{% url 'admin_dashboard' %}{% else %}{% url 'model_training' %}{% endif %}"
+            class="flex items-center px-4 py-2 text-primary bg-blue-100 rounded font-bold"
+          >
+            <i class="fas fa-brain mr-2"></i>Model Training
+          </a>
+
+          <!-- Dynamic menu items -->
+          {% for menu in menus %}
+          <a
+            href="{% url 'dynamic_menu_page' menu.url_name %}"
+            class="flex items-center px-4 py-2 rounded text-primary transition-colors duration-200 {% if current_url_name == menu.url_name %} bg-blue-100 text-primary font-bold {% else %} text-gray-700 hover:bg-blue-100 {% endif %}"
+          >
+            {% if menu.icon %}
+            <i class="{{ menu.icon }} mr-2"></i>
+            {% endif %} {{ menu.name }}
+          </a>
+          {% endfor %}
+        </nav>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <!-- ================= MAIN CONTENT ================= -->
+
+    <main id="content-area" class="ml-64 mt-16 p-6">
+      <div class="bg-white rounded-xl shadow-lg p-8">
+        <!-- HEADER -->
+
+        <div class="mb-8">
+          <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
+            <i class="fas fa-robot text-blue-600"></i>
+
+            Machine Learning Model Training
+          </h1>
+
+          <p class="text-gray-600 mt-2">
+            Upload cleaned dataset, select target column and IntelliDS AI will
+            train multiple ML models automatically.
+          </p>
+        </div>
+
+        <!-- ================= FORM ================= -->
+
+        <!-- ================================================= -->
+        <!-- Model Training Card -->
+        <!-- ================================================= -->
+
+        <div
+          class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden mb-8"
+        >
+          <!-- Header -->
+
+          <div
+            class="bg-gradient-to-r from-blue-600 to-cyan-600 px-8 py-7 text-white"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex items-center">
+                <div
+                  class="w-16 h-16 rounded-xl bg-white/20 flex items-center justify-center"
+                >
+                  <i class="fas fa-brain text-3xl"></i>
+                </div>
+
+                <div class="ml-5">
+                  <h2 class="text-3xl font-bold">Automatic Machine Learning</h2>
+
+                  <p class="text-blue-100 mt-2 max-w-4xl leading-relaxed">
+                    Upload a cleaned dataset and IntelliDS will automatically
+                    analyze the target column, determine whether the problem is
+                    Classification or Regression, train multiple machine
+                    learning algorithms, evaluate their performance, compare the
+                    results and recommend the best model for future predictions.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Body -->
+
+          <div class="p-8">
+            <form method="POST" enctype="multipart/form-data">
+              {% csrf_token %} {% if not columns %}
+
+              <!-- ================================================= -->
+              <!-- Supported Formats -->
+              <!-- ================================================= -->
+
+              <div class="grid md:grid-cols-3 gap-5 mb-10">
+                <div class="border rounded-2xl bg-blue-50 p-6 text-center">
+                  <i class="fas fa-file-excel text-5xl text-blue-600 mb-4"></i>
+                  <h3 class="font-bold text-lg text-blue-700">
+                    Excel Workbook
+                  </h3>
+                  <p class="text-gray-600 mt-2">.xlsx</p>
+                </div>
+
+                <div class="border rounded-2xl bg-green-50 p-6 text-center">
+                  <i class="fas fa-file-excel text-5xl text-green-600 mb-4"></i>
+                  <h3 class="font-bold text-lg text-green-700">Legacy Excel</h3>
+                  <p class="text-gray-600 mt-2">.xls</p>
+                </div>
+
+                <div class="border rounded-2xl bg-orange-50 p-6 text-center">
+                  <i class="fas fa-file-csv text-5xl text-orange-600 mb-4"></i>
+                  <h3 class="font-bold text-lg text-orange-700">CSV Dataset</h3>
+                  <p class="text-gray-600 mt-2">.csv</p>
+                </div>
+              </div>
+
+              <!-- ================================================= -->
+              <!-- IntelliDS Workflow -->
+              <!-- ================================================= -->
+
+              <div class="mt-12">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6">
+                  IntelliDS Machine Learning Workflow
+                </h3>
+
+                <div class="grid md:grid-cols-5 gap-5">
+                  <div class="bg-blue-50 border rounded-xl p-5 text-center">
+                    <div
+                      class="w-14 h-14 mx-auto rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-bold"
+                    >
+                      1
+                    </div>
+
+                    <h4 class="font-bold mt-4">Upload Dataset</h4>
+
+                    <p class="text-sm text-gray-600 mt-2">
+                      Upload cleaned CSV or Excel dataset.
+                    </p>
+                  </div>
+
+                  <div class="bg-green-50 border rounded-xl p-5 text-center">
+                    <div
+                      class="w-14 h-14 mx-auto rounded-full bg-green-600 text-white flex items-center justify-center text-xl font-bold"
+                    >
+                      2
+                    </div>
+
+                    <h4 class="font-bold mt-4">Analyze Dataset</h4>
+
+                    <p class="text-sm text-gray-600 mt-2">
+                      Detect columns and identify ML problem.
+                    </p>
+                  </div>
+
+                  <div class="bg-orange-50 border rounded-xl p-5 text-center">
+                    <div
+                      class="w-14 h-14 mx-auto rounded-full bg-orange-600 text-white flex items-center justify-center text-xl font-bold"
+                    >
+                      3
+                    </div>
+
+                    <h4 class="font-bold mt-4">Select Target</h4>
+
+                    <p class="text-sm text-gray-600 mt-2">
+                      Choose prediction column.
+                    </p>
+                  </div>
+
+                  <div class="bg-purple-50 border rounded-xl p-5 text-center">
+                    <div
+                      class="w-14 h-14 mx-auto rounded-full bg-purple-600 text-white flex items-center justify-center text-xl font-bold"
+                    >
+                      4
+                    </div>
+
+                    <h4 class="font-bold mt-4">Train Models</h4>
+
+                    <p class="text-sm text-gray-600 mt-2">
+                      Multiple algorithms are trained automatically.
+                    </p>
+                  </div>
+
+                  <div class="bg-cyan-50 border rounded-xl p-5 text-center">
+                    <div
+                      class="w-14 h-14 mx-auto rounded-full bg-cyan-600 text-white flex items-center justify-center text-xl font-bold"
+                    >
+                      5
+                    </div>
+
+                    <h4 class="font-bold mt-4">Best Model</h4>
+
+                    <p class="text-sm text-gray-600 mt-2">
+                      Compare performance and recommend the best model.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ================================================= -->
+              <!-- Automatic AI Pipeline -->
+              <!-- ================================================= -->
+
+              <div class="mt-12">
+                <div
+                  class="bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 rounded-3xl overflow-hidden shadow-xl"
+                >
+                  <div class="px-8 py-6 text-white">
+                    <h3 class="text-3xl font-bold">
+                      <i class="fas fa-robot mr-3"></i>
+
+                      IntelliDS Automatically Performs
+                    </h3>
+
+                    <p class="text-blue-100 mt-2">
+                      Everything below happens automatically after uploading
+                      your dataset.
+                    </p>
+                  </div>
+
+                  <div class="bg-white p-8">
+                    <div class="grid lg:grid-cols-4 md:grid-cols-2 gap-6">
+                      <div class="text-center">
+                        <i
+                          class="fas fa-chart-line text-blue-600 text-4xl mb-4"
+                        ></i>
+
+                        <h4 class="font-bold">Dataset Analysis</h4>
+
+                        <p class="text-sm text-gray-600 mt-2">
+                          Analyze columns and data types.
+                        </p>
+                      </div>
+
+                      <div class="text-center">
+                        <i
+                          class="fas fa-brain text-purple-600 text-4xl mb-4"
+                        ></i>
+
+                        <h4 class="font-bold">Problem Detection</h4>
+
+                        <p class="text-sm text-gray-600 mt-2">
+                          Classification or Regression.
+                        </p>
+                      </div>
+
+                      <div class="text-center">
+                        <i
+                          class="fas fa-gears text-green-600 text-4xl mb-4"
+                        ></i>
+
+                        <h4 class="font-bold">Model Training</h4>
+
+                        <p class="text-sm text-gray-600 mt-2">
+                          Train multiple ML algorithms automatically.
+                        </p>
+                      </div>
+
+                      <div class="text-center">
+                        <i
+                          class="fas fa-trophy text-orange-500 text-4xl mb-4"
+                        ></i>
+
+                        <h4 class="font-bold">Best Model Selection</h4>
+
+                        <p class="text-sm text-gray-600 mt-2">
+                          Compare accuracy and recommend the best model.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ================================================= -->
+              <!-- Supported Algorithms -->
+              <!-- ================================================= -->
+
+              <div class="mt-12">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6">
+                  Supported Machine Learning Algorithms
+                </h3>
+
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div class="border rounded-2xl p-6 shadow-sm">
+                    <h4 class="font-bold text-blue-600 mb-4">Tree Based</h4>
+
+                    <div class="space-y-3">
+                      <div class="flex items-center">
+                        <i class="fas fa-tree text-green-600 w-6"></i>
+                        Random Forest
+                      </div>
+
+                      <div class="flex items-center">
+                        <i class="fas fa-tree text-green-600 w-6"></i>
+                        Extra Trees
+                      </div>
+
+                      <div class="flex items-center">
+                        <i class="fas fa-code-branch text-blue-600 w-6"></i>
+                        Decision Tree
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="border rounded-2xl p-6 shadow-sm">
+                    <h4 class="font-bold text-purple-600 mb-4">Boosting</h4>
+
+                    <div class="space-y-3">
+                      <div class="flex items-center">
+                        <i class="fas fa-bolt text-yellow-500 w-6"></i>
+                        Gradient Boosting
+                      </div>
+
+                      <div class="flex items-center">
+                        <i class="fas fa-bolt text-orange-500 w-6"></i>
+                        AdaBoost
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="border rounded-2xl p-6 shadow-sm">
+                    <h4 class="font-bold text-red-600 mb-4">Linear Models</h4>
+
+                    <div class="space-y-3">
+                      <div class="flex items-center">
+                        <i class="fas fa-chart-line text-red-500 w-6"></i>
+                        Logistic Regression
+                      </div>
+
+                      <div class="flex items-center">
+                        <i class="fas fa-chart-line text-blue-500 w-6"></i>
+                        Linear Regression
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="border rounded-2xl p-6 shadow-sm">
+                    <h4 class="font-bold text-indigo-600 mb-4">
+                      Distance Based
+                    </h4>
+
+                    <div class="space-y-3">
+                      <div class="flex items-center">
+                        <i class="fas fa-circle-nodes text-cyan-500 w-6"></i>
+                        K-Nearest Neighbors
+                      </div>
+
+                      <div class="flex items-center">
+                        <i class="fas fa-vector-square text-indigo-500 w-6"></i>
+                        Support Vector Machine
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ================================================= -->
+              <!-- Dataset Requirements -->
+              <!-- ================================================= -->
+
+              <div
+                class="mt-12 bg-yellow-50 border border-yellow-300 rounded-2xl p-8"
+              >
+                <h3 class="text-2xl font-bold text-yellow-700 mb-6">
+                  <i class="fas fa-circle-info mr-2"></i>
+
+                  Recommended Dataset
+                </h3>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                  <div class="flex">
+                    <i class="fas fa-broom text-green-600 mt-1 mr-3"></i>
+                    Use cleaned dataset.
+                  </div>
+
+                  <div class="flex">
+                    <i class="fas fa-filter text-blue-600 mt-1 mr-3"></i>
+                    Remove unnecessary columns.
+                  </div>
+
+                  <div class="flex">
+                    <i class="fas fa-font text-purple-600 mt-1 mr-3"></i>
+                    Encode categorical values.
+                  </div>
+
+                  <div class="flex">
+                    <i class="fas fa-ban text-red-500 mt-1 mr-3"></i>
+                    Handle missing values.
+                  </div>
+
+                  <div class="flex">
+                    <i class="fas fa-table text-orange-600 mt-1 mr-3"></i>
+                    Keep meaningful column names.
+                  </div>
+
+                  <div class="flex">
+                    <i class="fas fa-bullseye text-cyan-600 mt-1 mr-3"></i>
+                    Select an appropriate prediction target.
+                  </div>
+                </div>
+              </div>
+
+              <!-- ================================================= -->
+              <!-- Upload Prepared Dataset -->
+              <!-- ================================================= -->
+
+              <div
+                class="mt-10 border-2 border-dashed border-blue-300 rounded-2xl bg-gradient-to-br from-blue-50 to-white p-10 text-center"
+              >
+                <div
+                  class="w-24 h-24 rounded-full bg-blue-100 mx-auto flex items-center justify-center"
+                >
+                  <i class="fas fa-cloud-upload-alt text-5xl text-blue-600"></i>
+                </div>
+
+                <h3 class="text-2xl font-bold text-gray-800 mt-6">
+                  Upload Prepared Dataset
+                </h3>
+
+                <p class="text-gray-500 mt-3 mb-6 max-w-3xl mx-auto">
+                  Select a cleaned CSV or Excel dataset generated from the Data
+                  Preparation module. IntelliDS will automatically analyse your
+                  dataset, detect the machine learning problem, train multiple
+                  algorithms, evaluate their performance and recommend the most
+                  suitable model for prediction.
+                </p>
+
+                <div class="flex justify-center">{{ form.dataset }}</div>
+
+                {% if form.dataset.errors %}
+                <div class="mt-5 text-red-600">{{ form.dataset.errors }}</div>
+                {% endif %}
+
+                <div class="mt-6 text-sm text-gray-500">
+                  Maximum File Size :
+                  <strong>100 MB</strong>
+
+                  &nbsp;&nbsp;|&nbsp;&nbsp; Supported Formats :
+
+                  <strong>.csv</strong>, <strong>.xls</strong>,
+                  <strong>.xlsx</strong>
+                </div>
+              </div>
+
+              <!-- ================================================= -->
+              <!-- Information Cards -->
+              <!-- ================================================= -->
+
+              <div class="grid md:grid-cols-2 gap-6 mt-10">
+                <!-- Automatic Training -->
+
+                <div
+                  class="bg-gray-50 border rounded-xl p-6 hover:shadow-md transition"
+                >
+                  <div class="flex items-center mb-4">
+                    <div
+                      class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center"
+                    >
+                      <i class="fas fa-robot text-blue-600 text-xl"></i>
+                    </div>
+
+                    <h4 class="ml-4 text-xl font-bold text-gray-800">
+                      IntelliDS Automatically Performs
+                    </h4>
+                  </div>
+
+                  <ul class="space-y-3 text-gray-600">
+                    <li>
+                      <i class="fas fa-check-circle text-green-500 mr-2"></i
+                      >Analyse uploaded dataset
+                    </li>
+                    <li>
+                      <i class="fas fa-check-circle text-green-500 mr-2"></i
+                      >Detect Classification or Regression
+                    </li>
+                    <li>
+                      <i class="fas fa-check-circle text-green-500 mr-2"></i
+                      >Train multiple ML algorithms
+                    </li>
+                    <li>
+                      <i class="fas fa-check-circle text-green-500 mr-2"></i
+                      >Compare evaluation metrics
+                    </li>
+                    <li>
+                      <i class="fas fa-check-circle text-green-500 mr-2"></i
+                      >Recommend the best performing model
+                    </li>
+                  </ul>
+                </div>
+
+                <!-- Dataset Requirements -->
+
+                <div
+                  class="bg-gray-50 border rounded-xl p-6 hover:shadow-md transition"
+                >
+                  <div class="flex items-center mb-4">
+                    <div
+                      class="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center"
+                    >
+                      <i class="fas fa-lightbulb text-yellow-600 text-xl"></i>
+                    </div>
+
+                    <h4 class="ml-4 text-xl font-bold text-gray-800">
+                      Recommended Dataset
+                    </h4>
+                  </div>
+
+                  <ul class="space-y-3 text-gray-600">
+                    <li>
+                      <i class="fas fa-check text-green-500 mr-2"></i>Use the
+                      cleaned dataset from Data Preparation
+                    </li>
+                    <li>
+                      <i class="fas fa-check text-green-500 mr-2"></i>Remove
+                      unnecessary or identifier columns
+                    </li>
+                    <li>
+                      <i class="fas fa-check text-green-500 mr-2"></i>Encode
+                      categorical variables when required
+                    </li>
+                    <li>
+                      <i class="fas fa-check text-green-500 mr-2"></i>Ensure
+                      missing values are handled
+                    </li>
+                    <li>
+                      <i class="fas fa-check text-green-500 mr-2"></i>Select a
+                      meaningful prediction target column
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- ================================================= -->
+              <!-- Upload Button -->
+              <!-- ================================================= -->
+
+              <div class="mt-10 text-right">
+                <button
+                  type="submit"
+                  class="inline-flex items-center bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white px-8 py-3 rounded-xl shadow-lg transition duration-300"
+                >
+                  <i class="fas fa-upload mr-3"></i>
+
+                  Upload & Analyze Dataset
+                </button>
+              </div>
+              {% else %}
+
+              <!-- Dataset Loaded -->
+
+              <div class="bg-green-50 border border-green-200 rounded-xl p-6">
+                <div class="flex items-center">
+                  <div
+                    class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center"
+                  >
+                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                  </div>
+
+                  <div class="ml-4">
+                    <h3 class="text-xl font-bold text-green-700">
+                      Dataset Loaded Successfully
+                    </h3>
+
+                    <p class="text-gray-600">
+                      Select the target column to begin automatic model
+                      training.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Target Selection -->
+
+              <div class="mt-8">
+                <label class="block text-lg font-semibold text-gray-700 mb-3">
+                  Prediction Target Column
+                </label>
+
+                <select
+                  name="target_column"
+                  class="w-full border border-gray-300 rounded-xl px-5 py-4 focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Select Target Column --</option>
+
+                  {% for col in columns %}
+
+                  <option value="{{col}}">{{col}}</option>
+
+                  {% endfor %}
+                </select>
+              </div>
+
+              <!-- Train Button -->
+
+              <div class="mt-8 text-right">
+                <button
+                  type="submit"
+                  class="inline-flex items-center bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl shadow-lg transition"
+                >
+                  <i class="fas fa-play mr-2"></i>
+
+                  Train Machine Learning Models
+                </button>
+              </div>
+
+              {% endif %}
+            </form>
+          </div>
+        </div>
+
+        {% if dataset_loaded %}
+
+        <!-- ================= SUMMARY ================= -->
+
+        <h2 class="text-xl font-bold mb-4">Dataset Overview</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+          <div class="bg-blue-50 border rounded-xl p-5">
+            <p class="text-gray-600">Rows</p>
+
+            <h3 class="text-3xl font-bold text-blue-700">{{summary.rows}}</h3>
+          </div>
+
+          <div class="bg-blue-50 border rounded-xl p-5">
+            <p class="text-gray-600">Columns</p>
+
+            <h3 class="text-3xl font-bold text-blue-700">
+              {{summary.columns}}
+            </h3>
+          </div>
+        </div>
+
+        {% endif %} {% if preview_data %}
+
+        <div class="bg-white shadow rounded-xl border p-6 mb-8">
+          <h2 class="text-xl font-bold mb-4">
+            <i class="fas fa-table text-blue-600"></i>
+            Dataset Preview (First 100 Rows)
+          </h2>
+
+          <div
+            class="overflow-x-auto overflow-y-auto border rounded-lg"
+            style="max-height: 500px"
+          >
+            <table class="min-w-full text-sm border-collapse">
+              <thead class="bg-blue-100 sticky top-0">
+                <tr>
+                  {% for col in preview_columns %}
+
+                  <th class="border px-4 py-2 whitespace-nowrap">{{col}}</th>
+
+                  {% endfor %}
+                </tr>
+              </thead>
+
+              <tbody>
+                {% for row in preview_data %}
+
+                <tr class="hover:bg-gray-50">
+                  {% for cell in row %}
+
+                  <td class="border px-4 py-2 whitespace-nowrap">{{cell}}</td>
+
+                  {% endfor %}
+                </tr>
+
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {% endif %}
+
+        <!-- ================= BEST MODEL ================= -->
+
+        {% if best_model %}
+
+        <div class="bg-green-50 border border-green-300 rounded-xl p-6 mb-8">
+          <h2 class="text-xl font-bold text-green-700">
+            <i class="fas fa-trophy mr-2"></i>
+
+            Best Model
+          </h2>
+
+          <p class="mt-3 text-lg">
+            Model:
+
+            <span class="font-bold"> {{best_model.model}} </span>
+          </p>
+
+          {% if problem_type == "classification" %}
+
+          <p class="text-lg">
+            Accuracy:
+
+            <span class="font-bold text-green-700">
+              {{best_model.accuracy}} %
+            </span>
+          </p>
+
+          {% else %}
+
+          <p class="text-lg">
+            R2 Score:
+
+            <span class="font-bold text-green-700">
+              {{best_model.r2_score}} %
+            </span>
+          </p>
+
+          {% endif %}
+        </div>
+
+        {% endif %}
+
+        
+
+        <!-- ================= GRAPH ================= -->
+
+        
+
+        {% if graph_url %}
+
+        <div class="bg-white shadow rounded-xl border p-6 mb-8">
+          <h2 class="text-xl font-bold mb-5">
+            {% if problem_type == "classification" %} Accuracy Comparison {% else %} R2 Score Comparison {% endif %}
+          </h2>
+
+          <img src="{{graph_url}}" class="w-full rounded-lg border" />
+        </div>
+
+        {% endif %}
+
+        <!-- ================= RESULTS ================= -->
+
+        {% if model_results %}
+
+        <!-- ================= MANUAL PREDICTION ================= -->
+
+        {% if best_model %}
+
+        <div
+          id="prediction-section"
+          class="bg-purple-50 border border-purple-300 rounded-xl p-6 mt-8"
+        >
+          <h2 class="text-xl font-bold text-purple-700 mb-5">
+            <i class="fas fa-magic mr-2"></i>
+            Make Prediction
+          </h2>
+
+          <form method="POST" id="predictionForm">
+            {% csrf_token %}
+
+            <input type="hidden" name="manual_predict" value="1" />
+
+            <p class="text-gray-700 mb-5">
+              Enter feature values manually and IntelliDS AI will predict the
+              result.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {% for field in prediction_fields %}
+
+              <div>
+                <label class="font-semibold text-gray-700"> {{field}} </label>
+
+                <input
+                  type="text"
+                  name="{{field}}"
+                  class="mt-2 w-full border rounded-lg px-4 py-3"
+                  placeholder="Enter {{field}}"
+                  required
+                />
+              </div>
+
+              {% endfor %}
+            </div>
+            <div class="mb-5">
+
+          <label class="font-semibold">
+            Prediction Model
+          </label>
+
+          <select
+            name="prediction_model"
+            class="mt-2 w-full border rounded-lg px-4 py-3"
+          >
+
+            {% for result in model_results %}
+
+            <option 
+              value="{{ result.model }}"
+              {% if result.model == selected_model_name %}selected{% endif %}
+            >
+
+              {{ result.model }}
+
+              {% if problem_type == "classification" %}
+                - Accuracy: {{ result.accuracy|default:"0" }}%
+
+              {% elif problem_type == "regression" %}
+                - R2 Score: {{ result.r2_score|default:"0" }}%
+
+              {% endif %}
+
+            </option>
+
+            {% endfor %}
+
+          </select>
+
+        </div>
+
+            <button
+              id="predictBtn"
+              type="submit"
+              disabled
+              class="mt-6 bg-gray-400 text-white px-7 py-3 rounded-lg font-semibold cursor-not-allowed"
+            >
+              <i class="fas fa-brain mr-2"></i>
+              Predict
+            </button>
+          </form>
+        </div>
+
+        {% endif %}
+
+        <!-- ================= PREDICTION RESULT ================= -->
+
+        {% if prediction %}
+        <script>
+          window.addEventListener("load", function () {
+            document.getElementById("prediction-section").scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          });
+        </script>
+
+        <div class="bg-green-50 border border-green-300 rounded-xl p-6 mt-8">
+          <h2 class="text-xl font-bold text-green-700 mb-5">
+            Prediction Result
+          </h2>
+
+          <table class="border min-w-full">
+            <thead class="bg-green-100">
+              <tr>
+                <th class="border px-5 py-3">Prediction</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {% for p in prediction %}
+
+              <tr>
+                <td class="border px-5 py-3 text-center">{{p}}</td>
+              </tr>
+
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% endif %}
+
+        <!-- ================= MODEL PERFORMANCE ================= -->
+
+        <div class="bg-white shadow rounded-xl overflow-hidden mt-10">
+          <h2 class="text-xl font-bold p-5">Model Performance Report</h2>
+
+          <div class="overflow-auto">
+            <table class="min-w-full border">
+              <thead class="bg-blue-100">
+                <tr>
+                  <th class="border px-5 py-3">Model</th>
+
+                  {% if problem_type == "classification" %}
+
+                  <th class="border px-5 py-3">Accuracy</th>
+
+                  <th class="border px-5 py-3">Precision</th>
+
+                  <th class="border px-5 py-3">Recall</th>
+
+                  <th class="border px-5 py-3">F1 Score</th>
+
+                  {% else %}
+
+                  <th class="border px-5 py-3">R2 Score</th>
+
+                  <th class="border px-5 py-3">MAE</th>
+
+                  <th class="border px-5 py-3">RMSE</th>
+
+                  <th class="border px-5 py-3">MSE</th>
+
+                  {% endif %}
+                </tr>
+              </thead>
+
+              <tbody>
+                {% for result in model_results %}
+
+                <tr class="hover:bg-gray-50">
+                  <!-- MODEL NAME -->
+                  <td class="border px-5 py-3 font-semibold">
+                    {{ result.model }}
+                  </td>
+
+                  {% if problem_type == "classification" %}
+
+                  <td class="border px-5 py-3 text-center">
+                    {{result.accuracy}} %
+                  </td>
+
+                  <td class="border px-5 py-3 text-center">
+                    {{result.precision}} %
+                  </td>
+
+                  <td class="border px-5 py-3 text-center">
+                    {{result.recall}} %
+                  </td>
+
+                  <td class="border px-5 py-3 text-center">{{result.f1}} %</td>
+
+                  {% else %}
+
+                  <td class="border px-5 py-3 text-center">
+                    {{result.r2_score}} %
+                  </td>
+
+                  <td class="border px-5 py-3 text-center">{{result.mae}}</td>
+
+                  <td class="border px-5 py-3 text-center">{{result.rmse}}</td>
+
+                  <td class="border px-5 py-3 text-center">{{result.mse}}</td>
+
+                  {% endif %}
+                </tr>
+
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {% endif %}
+      </div>
+      <a
+        href="?reset=1"
+        class="mt-6 inline-block bg-red-600 hover:bg-red-700 text-white px-7 py-3 rounded-lg font-semibold"
+      >
+        <i class="fas fa-trash mr-2"></i>
+
+        Reset Dataset
+      </a>
+    </main>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const form = document.getElementById("predictionForm");
+
+        if (!form) return;
+
+        const button = document.getElementById("predictBtn");
+
+        const inputs = form.querySelectorAll("input[type='text']");
+
+        function validate() {
+          let valid = true;
+
+          inputs.forEach((input) => {
+            if (input.value.trim() === "") {
+              valid = false;
+            }
+          });
+
+          button.disabled = !valid;
+
+          if (valid) {
+            button.classList.remove("bg-gray-400", "cursor-not-allowed");
+            button.classList.add("bg-purple-600", "hover:bg-purple-700");
+          } else {
+            button.classList.add("bg-gray-400", "cursor-not-allowed");
+            button.classList.remove("bg-purple-600", "hover:bg-purple-700");
+          }
+        }
+
+        inputs.forEach((input) => {
+          input.addEventListener("input", validate);
+        });
+
+        validate();
+      });
+
+      document.querySelectorAll(".ajax-link").forEach((link) => {
+        link.addEventListener("click", function (e) {
+          e.preventDefault();
+
+          fetch(this.href, {
+            headers: {
+              "X-Requested-With": "XMLHttpRequest",
+            },
+          })
+            .then((res) => res.text())
+
+            .then((html) => {
+              document.getElementById("content-area").innerHTML = html;
+
+              history.pushState({}, "", this.href);
+            });
+        });
+      });
+    </script>
+  </body>
+</html>

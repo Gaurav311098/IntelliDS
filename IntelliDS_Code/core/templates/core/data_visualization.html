@@ -1,0 +1,928 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Data Visualization - IntelliDS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { primary: "#3B82F6" },
+        },
+      },
+    };
+  </script>
+  <style>
+    /* Full page background */
+    body {
+      font-family: "Inter", sans-serif;
+      background-image: url("{% static 'images/bg.png' %}");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    .page-content {
+      position: relative;
+      z-index: 10;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50 font-sans">
+  <!-- Top Navbar -->
+  <nav class="fixed top-0 left-0 right-0 bg-white shadow-lg px-6 py-4 flex justify-between items-center z-50">
+    <h1 class="text-xl font-bold text-primary">
+      {% if request.user.is_superuser %} Admin Portal {% else %} User Portal
+      {% endif %}
+    </h1>
+
+    <div class="flex items-center space-x-4">
+      <span class="text-gray-700">Welcome, {{ request.user.username }}</span>
+      <a href="{% url 'logout' %}"
+        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition">Logout</a>
+    </div>
+  </nav>
+
+  <!-- Sidebar -->
+  <aside class="fixed left-0 top-16 bottom-0 w-64 bg-white shadow-lg overflow-y-auto hidden md:block z-40">
+    <div class="p-6">
+      <nav class="mt-6 space-y-2">
+        <!-- Dashboard always visible -->
+        <a href="{% if request.user.is_superuser %}{% url 'admin_dashboard' %}{% else %}{% url 'user_dashboard' %}{% endif %}"
+          class="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-100">
+          <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+        </a>
+        <!-- upload_dataset always visible -->
+        <a href="{% if request.user.is_superuser %}{% url 'admin_dashboard' %}{% else %}{% url 'upload_dataset' %}{% endif %}"
+          class="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-100">
+          <i class="fas fa-chart-line mr-2"></i>Data Analysis
+        </a>
+
+        <!-- upload_dataset always visible -->
+        <a href="{% if request.user.is_superuser %}{% url 'admin_dashboard' %}{% else %}{% url 'data_preparation' %}{% endif %}"
+          class="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-100">
+          <i class="fas fa-broom mr-2"></i>Data Preparation
+        </a>
+        <a href="{% if request.user.is_superuser %}{% url 'admin_dashboard' %}{% else %}{% url 'data_visualization' %}{% endif %}"
+          class="flex items-center px-4 py-2 text-primary bg-blue-100 rounded font-bold">
+          <i class="fas fa-chart-bar mr-2"></i>
+          Data Visualization
+        </a>
+
+        <a href="{% if request.user.is_superuser %}{% url 'admin_dashboard' %}{% else %}{% url 'model_training' %}{% endif %}"
+          class="flex items-center px-4 py-2 text-gray-700 hover:bg-blue-100">
+          <i class="fas fa-brain mr-2"></i>Model Training
+        </a>
+
+        <!-- Dynamic menu items -->
+        {% for menu in menus %}
+        <a href="{% url 'dynamic_menu_page' menu.url_name %}"
+          class="flex items-center px-4 py-2 rounded text-primary transition-colors duration-200 {% if current_url_name == menu.url_name %} bg-blue-100 text-primary font-bold {% else %} text-gray-700 hover:bg-blue-100 {% endif %}">
+          {% if menu.icon %}
+          <i class="{{ menu.icon }} mr-2"></i>
+          {% endif %} {{ menu.name }}
+        </a>
+        {% endfor %}
+      </nav>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <!-- ================= MAIN CONTENT ================= -->
+
+  <main id="content-area" class="ml-64 mt-16 p-6">
+    <div class="bg-white rounded-xl shadow-lg p-8">
+      <!-- PAGE HEADER -->
+
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
+          <i class="fas fa-chart-bar text-blue-600"></i>
+
+          Automatic Data Visualization
+        </h1>
+
+        <p class="text-gray-600 mt-2">
+          Upload your dataset and IntelliDS AI will automatically generate
+          professional visualizations for exploratory data analysis.
+        </p>
+      </div>
+
+      <!-- ================================================= -->
+      <!-- Data Visualization Upload Card -->
+      <!-- ================================================= -->
+
+      <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden mb-8">
+        <!-- Header -->
+
+        <div class="bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-600 px-8 py-7 text-white">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <div class="w-16 h-16 rounded-xl bg-white/20 flex items-center justify-center">
+                <i class="fas fa-chart-bar text-3xl"></i>
+              </div>
+
+              <div class="ml-5">
+                <h2 class="text-3xl font-bold">
+                  Automatic Data Visualization
+                </h2>
+
+                <p class="text-blue-100 mt-2 max-w-4xl">
+                  Upload a CSV or Excel dataset to automatically generate
+                  professional charts for exploratory data analysis (EDA).
+                  IntelliDS identifies numeric and categorical features,
+                  prepares the required data and produces a wide range of
+                  visualizations to help understand distributions,
+                  relationships, trends and patterns before statistical
+                  analysis or machine learning.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-8">
+          <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %} {% if not dataset_loaded %}
+
+            <!-- Supported Formats -->
+
+            <div class="grid md:grid-cols-3 gap-5 mb-8">
+              <div class="border rounded-xl bg-blue-50 p-5 text-center">
+                <i class="fas fa-file-excel text-4xl text-blue-600 mb-3"></i>
+
+                <h3 class="font-bold text-blue-700">Excel Workbook</h3>
+
+                <p class="text-gray-600 mt-2">.xlsx</p>
+              </div>
+
+              <div class="border rounded-xl bg-green-50 p-5 text-center">
+                <i class="fas fa-file-excel text-4xl text-green-600 mb-3"></i>
+
+                <h3 class="font-bold text-green-700">Legacy Excel</h3>
+
+                <p class="text-gray-600 mt-2">.xls</p>
+              </div>
+
+              <div class="border rounded-xl bg-orange-50 p-5 text-center">
+                <i class="fas fa-file-csv text-4xl text-orange-600 mb-3"></i>
+
+                <h3 class="font-bold text-orange-700">CSV Dataset</h3>
+
+                <p class="text-gray-600 mt-2">.csv</p>
+              </div>
+            </div>
+
+            <!-- ================================================= -->
+            <!-- Workflow -->
+            <!-- ================================================= -->
+
+            <div class="mt-10">
+              <h3 class="text-2xl font-bold text-gray-800 mb-6">
+                IntelliDS Visualization Workflow
+              </h3>
+
+              <div class="grid md:grid-cols-5 gap-5">
+                <div class="bg-blue-50 border rounded-xl p-5 text-center">
+                  <div
+                    class="w-14 h-14 mx-auto rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-bold">
+                    1
+                  </div>
+
+                  <h4 class="font-bold mt-4">Upload Dataset</h4>
+
+                  <p class="text-sm text-gray-600 mt-2">
+                    Upload CSV or Excel dataset.
+                  </p>
+                </div>
+
+                <div class="bg-green-50 border rounded-xl p-5 text-center">
+                  <div
+                    class="w-14 h-14 mx-auto rounded-full bg-green-600 text-white flex items-center justify-center text-xl font-bold">
+                    2
+                  </div>
+
+                  <h4 class="font-bold mt-4">Detect Columns</h4>
+
+                  <p class="text-sm text-gray-600 mt-2">
+                    Automatically identify numeric and categorical columns.
+                  </p>
+                </div>
+
+                <div class="bg-orange-50 border rounded-xl p-5 text-center">
+                  <div
+                    class="w-14 h-14 mx-auto rounded-full bg-orange-600 text-white flex items-center justify-center text-xl font-bold">
+                    3
+                  </div>
+
+                  <h4 class="font-bold mt-4">Select Charts</h4>
+
+                  <p class="text-sm text-gray-600 mt-2">
+                    Choose required visualizations.
+                  </p>
+                </div>
+
+                <div class="bg-purple-50 border rounded-xl p-5 text-center">
+                  <div
+                    class="w-14 h-14 mx-auto rounded-full bg-purple-600 text-white flex items-center justify-center text-xl font-bold">
+                    4
+                  </div>
+
+                  <h4 class="font-bold mt-4">Generate</h4>
+
+                  <p class="text-sm text-gray-600 mt-2">
+                    Professional charts are created automatically.
+                  </p>
+                </div>
+
+                <div class="bg-cyan-50 border rounded-xl p-5 text-center">
+                  <div
+                    class="w-14 h-14 mx-auto rounded-full bg-cyan-600 text-white flex items-center justify-center text-xl font-bold">
+                    5
+                  </div>
+
+                  <h4 class="font-bold mt-4">Explore</h4>
+
+                  <p class="text-sm text-gray-600 mt-2">
+                    Analyze patterns and relationships.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <!-- ================================================= -->
+            <!-- Supported Visualizations -->
+            <!-- ================================================= -->
+
+            <div class="mt-12">
+              <div class="mb-8">
+                <h3 class="text-3xl font-bold text-gray-800">
+                  <i class="fas fa-chart-pie text-blue-600 mr-3"></i>
+                  Supported Visualizations
+                </h3>
+                <p class="text-gray-600 mt-2">
+                  IntelliDS can automatically generate multiple statistical
+                  and exploratory visualizations from your uploaded dataset.
+                </p>
+              </div>
+
+              <div class="grid lg:grid-cols-2 xl:grid-cols-4 gap-6">
+                <!-- Distribution -->
+
+                <div class="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-xl transition p-6">
+                  <div class="w-14 h-14 rounded-xl bg-blue-100 flex items-center justify-center mb-5">
+                    <i class="fas fa-chart-area text-blue-600 text-2xl"></i>
+                  </div>
+
+                  <h4 class="text-xl font-bold text-blue-700 mb-5">
+                    Distribution
+                  </h4>
+
+                  <div class="space-y-3">
+                    <div class="flex items-center">
+                      <i class="fas fa-chart-column text-blue-500 w-6"></i>
+                      <span>Histogram</span>
+                    </div>
+
+                    <div class="flex items-center">
+                      <i class="fas fa-wave-square text-indigo-500 w-6"></i>
+                      <span>Density Plot</span>
+                    </div>
+
+                    <div class="flex items-center">
+                      <i class="fas fa-box text-purple-500 w-6"></i>
+                      <span>Box Plot</span>
+                    </div>
+
+                    <div class="flex items-center">
+                      <i class="fas fa-guitar text-pink-500 w-6"></i>
+                      <span>Violin Plot</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Relationship -->
+
+                <div class="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-xl transition p-6">
+                  <div class="w-14 h-14 rounded-xl bg-green-100 flex items-center justify-center mb-5">
+                    <i class="fas fa-project-diagram text-green-600 text-2xl"></i>
+                  </div>
+
+                  <h4 class="text-xl font-bold text-green-700 mb-5">
+                    Relationship
+                  </h4>
+
+                  <div class="space-y-3">
+                    <div class="flex items-center">
+                      <i class="fas fa-braille text-green-500 w-6"></i>
+                      <span>Scatter Plot</span>
+                    </div>
+
+                    <div class="flex items-center">
+                      <i class="fas fa-circle-notch text-cyan-500 w-6"></i>
+                      <span>Bubble Chart</span>
+                    </div>
+
+                    <div class="flex items-center">
+                      <i class="fas fa-share-nodes text-orange-500 w-6"></i>
+                      <span>Pair Plot</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Trend -->
+
+                <div class="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-xl transition p-6">
+                  <div class="w-14 h-14 rounded-xl bg-purple-100 flex items-center justify-center mb-5">
+                    <i class="fas fa-chart-line text-purple-600 text-2xl"></i>
+                  </div>
+
+                  <h4 class="text-xl font-bold text-purple-700 mb-5">
+                    Trend Analysis
+                  </h4>
+
+                  <div class="space-y-3">
+                    <div class="flex items-center">
+                      <i class="fas fa-chart-line text-blue-600 w-6"></i>
+                      <span>Line Chart</span>
+                    </div>
+
+                    <div class="flex items-center">
+                      <i class="fas fa-chart-area text-teal-500 w-6"></i>
+                      <span>Area Chart</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Categorical -->
+
+                <div class="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-xl transition p-6">
+                  <div class="w-14 h-14 rounded-xl bg-red-100 flex items-center justify-center mb-5">
+                    <i class="fas fa-chart-pie text-red-600 text-2xl"></i>
+                  </div>
+
+                  <h4 class="text-xl font-bold text-red-700 mb-5">
+                    Categorical
+                  </h4>
+
+                  <div class="space-y-3">
+                    <div class="flex items-center">
+                      <i class="fas fa-chart-pie text-orange-500 w-6"></i>
+                      <span>Pie Chart</span>
+                    </div>
+
+                    <div class="flex items-center">
+                      <i class="fas fa-chart-bar text-green-600 w-6"></i>
+                      <span>Bar Chart</span>
+                    </div>
+
+                    <div class="flex items-center">
+                      <i class="fas fa-list-ol text-gray-600 w-6"></i>
+                      <span>Count Plot</span>
+                    </div>
+
+                    <div class="flex items-center">
+                      <i class="fas fa-th text-red-500 w-6"></i>
+                      <span>Correlation Heatmap</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ================================================= -->
+            <!-- Automatic Analysis -->
+            <!-- ================================================= -->
+
+            <div class="mt-12">
+              <div
+                class="bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 rounded-3xl shadow-xl overflow-hidden">
+                <div class="px-8 py-7 text-white">
+                  <h3 class="text-3xl font-bold mb-2">
+                    <i class="fas fa-robot mr-3"></i>
+                    IntelliDS Automatically Performs
+                  </h3>
+
+                  <p class="text-blue-100">
+                    Every uploaded dataset is analysed automatically before
+                    visualization generation.
+                  </p>
+                </div>
+
+                <div class="bg-white p-8">
+                  <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="text-center">
+                      <i class="fas fa-shield-alt text-blue-600 text-4xl mb-4"></i>
+                      <h4 class="font-bold mb-2">Dataset Validation</h4>
+                      <p class="text-sm text-gray-600">
+                        Checks dataset structure and integrity.
+                      </p>
+                    </div>
+
+                    <div class="text-center">
+                      <i class="fas fa-filter text-green-600 text-4xl mb-4"></i>
+                      <h4 class="font-bold mb-2">Column Detection</h4>
+                      <p class="text-sm text-gray-600">
+                        Identifies numeric and categorical columns.
+                      </p>
+                    </div>
+
+                    <div class="text-center">
+                      <i class="fas fa-search text-purple-600 text-4xl mb-4"></i>
+                      <h4 class="font-bold mb-2">Relationship Analysis</h4>
+                      <p class="text-sm text-gray-600">
+                        Creates statistical and correlation charts.
+                      </p>
+                    </div>
+
+                    <div class="text-center">
+                      <i class="fas fa-wand-magic-sparkles text-orange-500 text-4xl mb-4"></i>
+                      <h4 class="font-bold mb-2">Automatic Visualization</h4>
+                      <p class="text-sm text-gray-600">
+                        Generates multiple charts in one click.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ================================================= -->
+            <!-- Dataset Requirements -->
+            <!-- ================================================= -->
+
+            <div class="mt-12">
+              <div class="bg-white border border-yellow-300 rounded-3xl shadow-sm overflow-hidden">
+                <div class="bg-yellow-500 text-white px-8 py-5">
+                  <h3 class="text-2xl font-bold">
+                    <i class="fas fa-circle-info mr-2"></i>
+                    Dataset Requirements
+                  </h3>
+                </div>
+
+                <div class="p-8">
+                  <div class="grid md:grid-cols-2 gap-6">
+                    <div class="flex items-start">
+                      <i class="fas fa-table text-yellow-600 text-xl mt-1 mr-4"></i>
+                      <span>First row should contain column names.</span>
+                    </div>
+
+                    <div class="flex items-start">
+                      <i class="fas fa-hashtag text-blue-600 text-xl mt-1 mr-4"></i>
+                      <span>Numeric columns are required for statistical
+                        charts.</span>
+                    </div>
+
+                    <div class="flex items-start">
+                      <i class="fas fa-tags text-orange-500 text-xl mt-1 mr-4"></i>
+                      <span>Categorical columns are required for Pie, Bar and
+                        Count plots.</span>
+                    </div>
+
+                    <div class="flex items-start">
+                      <i class="fas fa-file-upload text-green-600 text-xl mt-1 mr-4"></i>
+                      <span>Maximum supported upload size is 100 MB.</span>
+                    </div>
+
+                    <div class="flex items-start">
+                      <i class="fas fa-file-excel text-emerald-600 text-xl mt-1 mr-4"></i>
+                      <span>Supported formats: CSV, XLS and XLSX.</span>
+                    </div>
+
+                    <div class="flex items-start">
+                      <i class="fas fa-broom text-purple-600 text-xl mt-1 mr-4"></i>
+                      <span>Missing values are handled automatically whenever
+                        possible.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Upload Area -->
+
+            <div
+              class="mt-12 border-2 border-dashed border-blue-300 rounded-2xl bg-gradient-to-br from-blue-50 to-white p-10 text-center shadow-sm">
+              <div class="w-24 h-24 rounded-full bg-blue-100 mx-auto flex items-center justify-center">
+                <i class="fas fa-cloud-upload-alt text-5xl text-blue-600"></i>
+              </div>
+
+              <h3 class="text-2xl font-bold text-gray-800 mt-6">
+                Upload Dataset
+              </h3>
+
+              <p class="text-gray-500 mt-2 mb-6">
+                Drag & Drop your dataset here<br />
+                or click below to browse your computer
+              </p>
+
+              <div class="flex justify-center">{{ form.dataset }}</div>
+
+              {% if form.dataset.errors %}
+
+              <div class="mt-4 text-red-600">{{ form.dataset.errors }}</div>
+
+              {% endif %}
+
+              <div class="mt-6 text-sm text-gray-500">
+                Maximum File Size :
+                <strong>100 MB</strong>
+
+                &nbsp;&nbsp; | &nbsp;&nbsp; Supported Formats :
+
+                <strong>.csv</strong>, <strong>.xls</strong>,
+                <strong>.xlsx</strong>
+              </div>
+            </div>
+
+            <!-- Information -->
+
+            <!-- Visualization Features -->
+
+            <div class="mt-10">
+              <h3 class="text-2xl font-bold text-gray-800 mb-2">
+                Visualization Features
+              </h3>
+
+              <p class="text-gray-600 mb-6">
+                IntelliDS automatically identifies the appropriate columns and
+                enables the generation of multiple statistical and exploratory
+                charts for understanding distributions, relationships, trends
+                and categorical patterns within the uploaded dataset.
+              </p>
+
+              <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div class="bg-gray-50 border rounded-xl p-6 text-center hover:shadow-md transition">
+                  <div class="w-20 h-20 mx-auto rounded-full bg-blue-100 flex items-center justify-center mb-5">
+                    <i class="fas fa-chart-area text-blue-600 text-4xl"></i>
+                  </div>
+                  <h4 class="font-bold text-lg mb-3">
+                    Distribution Analysis
+                  </h4>
+                  <p class="text-sm text-gray-600">
+                    Generate Histograms, Density Plots, Box Plots and Violin
+                    Plots to understand data distribution and identify
+                    outliers.
+                  </p>
+                </div>
+
+                <div class="bg-gray-50 border rounded-xl p-6 text-center hover:shadow-md transition">
+                  <div class="w-20 h-20 mx-auto rounded-full bg-green-100 flex items-center justify-center mb-5">
+                    <i class="fas fa-project-diagram text-green-600 text-4xl"></i>
+                  </div>
+                  <h4 class="font-bold text-lg mb-3">
+                    Relationship Analysis
+                  </h4>
+                  <p class="text-sm text-gray-600">
+                    Create Scatter Plots, Bubble Charts and Pair Plots to
+                    examine relationships between numerical variables.
+                  </p>
+                </div>
+
+                <div class="bg-gray-50 border rounded-xl p-6 text-center hover:shadow-md transition">
+                  <div class="w-20 h-20 mx-auto rounded-full bg-red-100 flex items-center justify-center mb-5">
+                    <i class="fas fa-fire text-red-600 text-4xl"></i>
+                  </div>
+                  <h4 class="font-bold text-lg mb-3">Correlation Analysis</h4>
+                  <p class="text-sm text-gray-600">
+                    Generate Heatmaps to measure correlations between
+                    numerical features.
+                  </p>
+                </div>
+
+                <div class="bg-gray-50 border rounded-xl p-6 text-center hover:shadow-md transition">
+                  <div class="w-20 h-20 mx-auto rounded-full bg-purple-100 flex items-center justify-center mb-5">
+                    <i class="fas fa-chart-line text-purple-600 text-4xl"></i>
+                  </div>
+                  <h4 class="font-bold text-lg mb-3">Trend Analysis</h4>
+                  <p class="text-sm text-gray-600">
+                    Generate Line Charts and Area Charts to visualize
+                    sequential trends.
+                  </p>
+                </div>
+
+                <div class="bg-gray-50 border rounded-xl p-6 text-center hover:shadow-md transition">
+                  <div class="w-20 h-20 mx-auto rounded-full bg-orange-100 flex items-center justify-center mb-5">
+                    <i class="fas fa-chart-pie text-orange-600 text-4xl"></i>
+                  </div>
+                  <h4 class="font-bold text-lg mb-3">Categorical Analysis</h4>
+                  <p class="text-sm text-gray-600">
+                    Generate Pie Charts, Bar Charts and Count Plots for
+                    categorical columns.
+                  </p>
+                </div>
+
+                <div class="bg-gray-50 border rounded-xl p-6 text-center hover:shadow-md transition">
+                  <div class="w-20 h-20 mx-auto rounded-full bg-teal-100 flex items-center justify-center mb-5">
+                    <i class="fas fa-images text-teal-600 text-4xl"></i>
+                  </div>
+                  <h4 class="font-bold text-lg mb-3">
+                    Multiple Visualizations
+                  </h4>
+                  <p class="text-sm text-gray-600">
+                    Generate multiple visualization types together in one
+                    execution for faster exploratory data analysis.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Upload Button -->
+
+            <div class="mt-10 text-center">
+              <button type="submit"
+                class="inline-flex items-center px-10 py-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg transition duration-300">
+                <i class="fas fa-chart-bar mr-3"></i>
+
+                Upload & Generate Visualizations
+              </button>
+            </div>
+
+            {% else %}
+
+            <!-- Dataset Loaded Successfully -->
+
+            <div class="bg-green-50 border border-green-200 rounded-xl p-6 mb-8">
+              <div class="flex items-center">
+                <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                  <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                </div>
+
+                <div class="ml-4 w-full">
+                  <h3 class="text-xl font-bold text-green-700">
+                    Dataset Loaded Successfully
+                  </h3>
+
+                  <div class="grid grid-cols-2 gap-5 mt-6">
+                    <div class="bg-blue-50 p-5 rounded-xl">
+                      <p class="text-gray-600">Total Rows</p>
+                      <h2 class="text-2xl font-bold">{{ summary.rows }}</h2>
+                    </div>
+
+                    <div class="bg-blue-50 p-5 rounded-xl">
+                      <p class="text-gray-600">Total Columns</p>
+                      <h2 class="text-2xl font-bold">{{ summary.columns }}</h2>
+                    </div>
+                  </div>
+
+                  <p class="text-gray-600 mt-4">
+                    Preview of the uploaded dataset and generated visualizations.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dataset Preview -->
+
+            <div class="mt-8">
+
+              <div class="flex items-center justify-between mb-4">
+
+                <h2 class="text-2xl font-bold">
+                  <i class="fas fa-table text-blue-600 mr-2"></i>
+                  Dataset Preview
+                </h2>
+
+                <span class="text-sm text-gray-500">
+                  Showing first {{ preview_rows }} rows of {{ summary.rows }}
+                </span>
+
+              </div>
+
+              <!-- Dynamic Scroll Container -->
+
+              <div class="border rounded-xl shadow bg-white overflow-x-auto overflow-y-auto" style="max-height:700px;">
+
+                <table class="min-w-max w-full text-sm border-collapse">
+
+                  <thead class="bg-blue-600 text-white sticky top-0 z-10">
+
+                    <tr>
+
+                      {% for col in preview_columns %}
+
+                      <th class="border px-4 py-3 whitespace-nowrap">
+                        {{ col }}
+                      </th>
+
+                      {% endfor %}
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    {% for row in preview_data %}
+
+                    <tr class="hover:bg-blue-50">
+
+                      {% for cell in row %}
+
+                      <td class="border px-4 py-2 whitespace-nowrap">
+                        {{ cell }}
+                      </td>
+
+                      {% endfor %}
+
+                    </tr>
+
+                    {% endfor %}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+            </div>
+            {% if charts %}
+
+
+
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+
+              <div>
+                <h2 class="text-3xl font-bold mt-10">
+                  <i class="fas fa-chart-area text-blue-600 mr-2"></i>
+                  Generated Visualizations
+                </h2>
+
+                <p class="text-gray-500 mt-2">
+                  {{ charts|length }} visualization{{ charts|length|pluralize }}
+                  generated successfully.
+                </p>
+              </div>
+
+              <div class="mt-4 md:mt-0">
+
+                {% comment %} <a href="{% url 'download_visualization_pdf' %}" target="_blank"
+                  class="inline-flex items-center px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl shadow-lg transition duration-300">
+
+                  <i class="fas fa-file-pdf text-xl mr-3"></i>
+
+                  Download PDF Report
+
+                </a> {% endcomment %}
+
+              </div>
+
+            </div>
+
+            <div class="grid grid-cols-1 gap-8">
+
+              {% for chart in charts %}
+
+              <div class="bg-white rounded-2xl shadow-lg border p-6">
+
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+
+                  {% if chart.type == "pie" %}
+
+                  <i class="fas fa-chart-pie text-orange-500"></i>
+
+
+                  {% elif chart.type == "bar" %}
+
+                  <i class="fas fa-chart-bar text-purple-500"></i>
+
+
+                  {% elif chart.type == "histogram" %}
+
+                  <i class="fas fa-chart-column text-blue-500"></i>
+
+
+                  {% elif chart.type == "box" %}
+
+                  <i class="fas fa-box text-indigo-500"></i>
+
+
+                  {% elif chart.type == "scatter" %}
+
+                  <i class="fas fa-chart-line text-green-500"></i>
+
+
+                  {% elif chart.type == "heatmap" %}
+
+                  <i class="fas fa-fire text-red-500"></i>
+
+
+                  {% endif %}
+
+                  {{ chart.title }}
+
+                </h3>
+
+                <div id="chart{{ forloop.counter }}" class="w-full mb-8" style="height:600px; min-width:300px;">
+                </div>
+
+                <div class="mt-10 pt-6 border-t border-gray-200">
+
+                  <ol class="space-y-5 list-decimal list-inside">
+
+                    {% for item in chart.description %}
+
+                    <li class="text-gray-700 leading-7 pl-2">
+
+                      <span class="font-bold text-gray-900">
+                        {{ item.title }}:
+                      </span>
+
+                      {{ item.text }}
+
+                    </li>
+
+                    {% endfor %}
+
+                  </ol>
+
+                </div>
+
+              </div>
+
+              {% endfor %}
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+        {% endif %}
+
+        </form>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+  {% if charts %}
+  <script>
+
+    document.addEventListener("DOMContentLoaded", function () {
+
+
+      {% for chart in charts %}
+
+      var figure = {{ chart.graph| safe}};
+
+    var chartDiv = document.getElementById(
+      "chart{{ forloop.counter }}"
+    );
+
+
+    Plotly.newPlot(
+      chartDiv,
+      figure.data,
+      {
+        ...figure.layout,
+        autosize: true
+      },
+      {
+        responsive: true,
+        displaylogo: false
+      }
+    ).then(function () {
+
+      Plotly.Plots.resize(chartDiv);
+      setTimeout(function () {
+        Plotly.Plots.resize(chartDiv);
+      }, 300);
+
+    });
+
+
+    {% endfor %}
+
+
+
+    window.addEventListener("resize", function () {
+
+      document.querySelectorAll(".js-plotly-plot")
+        .forEach(function (chart) {
+
+          Plotly.Plots.resize(chart);
+
+        });
+
+    });
+
+
+});
+
+  </script>
+  {% endif %}
+
+</body>
+
+</html>

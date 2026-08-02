@@ -1,0 +1,109 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Page - Access Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { primary: '#3B82F6' }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Full page background */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-image: url("{% static 'images/bg.png' %}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        .page-content {
+            position: relative;
+            z-index: 10;
+        }
+
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+
+<!-- Top Navbar -->
+<nav class="fixed top-0 left-0 right-0 bg-white shadow-lg px-6 py-4 flex justify-between items-center z-50">
+    <h1 class="text-xl font-bold text-primary">
+    {% if request.user.is_superuser %}
+        Admin Portal
+    {% else %}
+        User Portal
+    {% endif %}
+</h1>
+
+    <div class="flex items-center space-x-4">
+        <span class="text-gray-700">Welcome, {{ request.user.username }}</span>
+        <a href="{% url 'logout' %}" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition">Logout</a>
+    </div>
+</nav>
+
+<!-- Sidebar -->
+<aside class="fixed left-0 top-16 bottom-0 w-64 bg-white shadow-lg overflow-y-auto hidden md:block z-40">
+    <div class="p-6">
+        <nav class="mt-6 space-y-2">
+            <!-- Dashboard always visible -->
+            <a href="{% if request.user.is_superuser %}{% url 'admin_dashboard' %}{% else %}{% url 'user_dashboard' %}{% endif %}"
+               class="flex items-center px-4 py-2 text-primary">
+                <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+            </a>
+
+            <!-- Dynamic menu items -->
+            {% for menu in menus %}
+                <a href="{% url 'dynamic_menu_page' menu.url_name %}"
+                class="flex items-center px-4 py-2 rounded text-primary transition-colors duration-200
+                        {% if current_url_name == menu.url_name %}
+                            bg-blue-100 text-primary font-bold
+                        {% else %}
+                            text-gray-700 hover:bg-blue-100
+                        {% endif %}">
+                    {% if menu.icon %}
+                        <i class="{{ menu.icon }} mr-2"></i>
+                    {% endif %}
+                    {{ menu.name }}
+                </a>
+            {% endfor %}
+
+        </nav>
+    </div>
+</aside>
+
+
+<!-- Main Content -->
+<main class="ml-64 mt-16 p-6">
+    <div class="bg-white p-6 rounded-lg shadow">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4">{{ title|default:"Test Page" }}</h1>
+        <p class="text-gray-600 mb-4">This is a placeholder test page. You can use it to verify navigation and access control.</p>
+        
+        <div class="space-y-4">
+            <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h2 class="text-lg font-semibold text-blue-700 mb-2">Navigation Test</h2>
+                <p class="text-gray-700">Use the sidebar to navigate between menus. If you see this page, your menu access is working correctly.</p>
+            </div>
+
+            <div class="p-4 bg-green-50 rounded-lg border border-green-200">
+                <h2 class="text-lg font-semibold text-green-700 mb-2">Dynamic User Info</h2>
+                <p class="text-gray-700">Logged in as: <span class="font-bold text-primary">{{ user.username }}</span></p>
+                <p class="text-gray-700">Email: <span class="font-bold text-primary">{{ user.email }}</span></p>
+            </div>
+        </div>
+    </div>
+</main>
+
+</body>
+</html>

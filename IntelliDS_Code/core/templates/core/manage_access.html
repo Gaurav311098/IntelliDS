@@ -1,0 +1,88 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Access - Access Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: { colors: { primary: '#3B82F6' } }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-sans">
+
+<!-- Top Navbar -->
+<nav class="fixed top-0 left-0 right-0 bg-white shadow-lg px-6 py-4 flex justify-between items-center z-50">
+    <h1 class="text-xl font-bold text-primary">Manage Access</h1>
+    <div class="flex items-center space-x-4">
+        <a href="{% url 'admin_dashboard' %}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">Back to Dashboard</a>
+    </div>
+</nav>
+
+<!-- Sidebar -->
+<aside class="fixed left-0 top-16 bottom-0 w-64 bg-white shadow-lg overflow-y-auto hidden md:block z-40">
+    <div class="p-6">
+        <nav class="mt-6 space-y-2">
+            <a href="{% url 'admin_dashboard' %}" class="flex items-center px-4 py-2 text-primary hover:bg-blue-100 rounded">
+                <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+            </a>
+        </nav>
+    </div>
+</aside>
+
+<!-- Main Content -->
+<main class="ml-64 mt-16 p-6">
+
+    <!-- Alerts -->
+    {% if messages %}
+        <div id="alertBox" class="mb-4 space-y-2">
+            {% for message in messages %}
+                <div class="p-3 rounded-lg shadow {% if message.tags == 'success' %}bg-green-100 text-green-800{% elif message.tags == 'error' %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+        <script>
+            setTimeout(() => document.getElementById('alertBox').remove(), 4000);
+        </script>
+    {% endif %}
+
+    <!-- Header -->
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 space-y-4 md:space-y-0">
+        <h1 class="text-3xl font-bold text-gray-800">Manage Menu Access</h1>
+    </header>
+
+    <!-- User Selection & Menu Assignment Form -->
+    <form method="POST" class="bg-white p-6 rounded-lg shadow-md w-full max-w-2xl">
+        {% csrf_token %}
+        <label class="block mb-2 font-medium text-gray-700">Select User</label>
+        <select name="user" class="w-full p-3 border border-gray-300 rounded-lg mb-4">
+            <option value="">-- Select User --</option>
+            {% for u in users %}
+                <option value="{{ u.id }}" {% if selected_user and selected_user.id == u.id %}selected{% endif %}>{{ u.username }}</option>
+            {% endfor %}
+        </select>
+
+        <label class="block mb-2 font-medium text-gray-700">Assign Menus</label>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
+            {% for menu in menus %}
+                <label class="flex items-center space-x-2">
+                    <input type="checkbox" name="menus" value="{{ menu.id }}" {% if menu.id in user_access %}checked{% endif %} class="form-checkbox h-5 w-5 text-primary">
+                    <span>{{ menu.name }}</span>
+                </label>
+            {% endfor %}
+        </div>
+
+        <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">Update Access</button>
+    </form>
+
+</main>
+
+</body>
+</html>

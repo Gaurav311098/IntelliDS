@@ -1,41 +1,130 @@
-# IntelliDS
-An Intelligent End-to-End AutoML Platform
+# IntelliDS - Intelligent End-to-End AutoML Platform
 
-# IntelliDS – All Rights Reserved License
-
-**Copyright © 2026 Gaurav Deshpande. All Rights Reserved.**
-
-This software and all associated source code, documentation, datasets (where applicable), designs, presentations, and other project materials (collectively, the "Project") are the intellectual property of **Gaurav Deshpande**.
-
-## Permission for Evaluation
-
-This Project is made available solely for academic review, project evaluation, and demonstration purposes, including assessment by competition organizers, evaluators, and academic institutions.
-
-No other rights are granted.
-
-## Restrictions
-
-Without prior written permission from the copyright holder, you may **not**:
-
-* Copy or reproduce the Project or any substantial portion of it.
-* Modify, adapt, or create derivative works based on the Project.
-* Redistribute or publish the Project or its source code.
-* Use the Project for commercial purposes.
-* Sell, sublicense, or otherwise monetize the Project.
-* Incorporate any part of the Project into another software product or service.
-
-## Ownership
-
-All intellectual property rights, including copyrights and any related rights, remain exclusively with the author.
-
-## Disclaimer
-
-This Project is provided "AS IS" without warranties of any kind, express or implied. The author shall not be liable for any damages arising from the use of this Project.
-
-## Contact
-
-For licensing requests or permission to use any part of this Project, please contact the author directly.
+> An automated Machine Learning platform built with **Python**, **Django**, and **Scikit-learn** that simplifies the complete machine learning workflow through an intuitive web interface.
 
 ---
 
-**Copyright © 2026 Gaurav Deshpande. All Rights Reserved.**
+## Project Overview
+
+IntelliDS enables users to perform the complete machine learning lifecycle without extensive programming knowledge. Users can upload datasets, preprocess data, visualize insights, train multiple machine learning models, compare their performance, and download the best-performing model.
+
+---
+
+## Key Features
+
+* Upload CSV and Excel datasets
+* Automated data preprocessing
+* Missing value handling
+* Feature encoding and scaling
+* Exploratory Data Analysis (EDA)
+* Interactive data visualization
+* Automatic problem type detection
+* Train multiple Machine Learning models
+* Model performance comparison
+* Best model selection
+* Prediction interface
+* Download trained models
+
+---
+
+## Technology Stack
+
+| Category         | Technologies   |
+| ---------------- | -------------- |
+| Backend          | Python, Django |
+| Machine Learning | Scikit-learn   |
+| Data Processing  | Pandas, NumPy  |
+| Visualization    | Matplotlib     |
+| Dataset Support  | CSV, Excel     |
+
+---
+
+## Project Structure
+
+```text
+IntelliDS_AutoML/
+│
+├── access_portal/         # Django project
+├── core/                  # Main application
+├── sample_Datasets/       # Sample datasets
+├── Presentation/          # Project presentation & architecture
+├── screenshots/           # Application screenshots
+├── manage.py
+├── requirements.txt
+└── README.md
+```
+
+---
+
+## Screenshots
+
+> Add application screenshots inside the `screenshots/` folder.
+
+* Dashboard
+* Dataset Upload
+* Data Preparation
+* Data Visualization
+* Model Training
+* Model Comparison
+* Prediction
+
+---
+
+## Installation
+
+```bash
+git clone https://github.com/YOUR_USERNAME/IntelliDS.git
+
+cd IntelliDS
+
+pip install -r requirements.txt
+
+python manage.py migrate
+
+python manage.py runserver
+```
+
+Open:
+
+```text
+http://127.0.0.1:8000
+```
+
+---
+
+## Project Presentation
+
+The project presentation and architecture diagram are available in the **Presentation/** folder.
+
+---
+
+## Future Enhancements
+
+* Deep Learning Integration
+* Explainable AI (XAI)
+* Hyperparameter Optimization
+* Time Series Forecasting
+* REST API Support
+* Docker Deployment
+
+---
+
+## Author
+
+**Gaurav Deshpande**
+
+Data Science • Machine Learning • Python • Django
+
+---
+
+## License
+
+This project is **proprietary software** and is published **only for academic evaluation and portfolio demonstration**.
+
+Unauthorized copying, modification, redistribution, or commercial use is strictly prohibited.
+
+See the **LICENSE** file for complete terms.
+
+---
+
+© 2026 Gaurav Deshpande. All Rights Reserved.
